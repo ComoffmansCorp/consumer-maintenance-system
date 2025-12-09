@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+    <meta charset="UTF-8">
+    <title>ElectroService Test Client</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 32px;
+            background: #f4f6fb;
+        }
+        
+        h1 {
+            color: #1d3557;
+        }
+        
+        section {
+            background: #fff;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 24px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 4px;
+            font-weight: bold;
+        }
+        
+        input,
+        select,
+        textarea {
+            width: 100%;
+            padding: 8px;
+            border-radius: 6px;
+            border: 1px solid #cfd8ea;
+            margin-bottom: 12px;
+        }
+        
+        button {
+            background: #1d70f2;
+            color: #fff;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+        
+        button:disabled {
+            background: #9fb8e7;
+            cursor: not-allowed;
+        }
+        
+        .row {
+            display: flex;
+            gap: 16px;
+        }
+        
+        .row>div {
+            flex: 1;
+        }
+        
+        pre {
+            background: #0f172a;
+            color: #f1f5f9;
+            padding: 12px;
+            border-radius: 8px;
+            overflow-x: auto;
+        }
+        
+        .token {
+            font-size: 12px;
+            word-break: break-all;
+            background: #e1e8ff;
+            padding: 6px;
+            border-radius: 6px;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Тестовый клиент</h1>
+
+    <section id="auth">
+        <h2>1. Авторизация</h2>
+        <div class="row">
+            <div>
+                <label>Логин</label>
+                <input id="login-username" value="electrician1">
+            </div>
+            <div>
+                <label>Пароль</label>
+                <input id="login-password" type="password" value="pass123">
+            </div>
+        </div>
+        <button onclick="register()">Регистрация</button>
+        <button onclick="login()">Войти</button>
+        <p>Токен: <span id="token" class="token">пока пусто</span></p>
+    </section>
+
+    <section>
+        <h2>2. Задачи</h2>
+        <button onclick="loadTasks()">GET /api/tasks</button>
+        <div class="row">
+            <div>
+                <label>ID задачи</label>
+                <input id="task-id">
+            </div>
+            <div>
+                <label>Новый статус</label>
+                <select id="task-status">
+                <option value="IN_PROGRESS">IN_PROGRESS</option>
+                <option value="COMPLETED">COMPLETED</option>
+            </select>
+            </div>
+        </div>
+        <button onclick="updateTask()">PUT /api/tasks/{id}/status</button>
+    </section>
+
+    <section>
+        <h2>3. Создать акт осмотра</h2>
+        <label>JSON тела</label>
+        <textarea id="inspection-json" rows="8">
+{
+  "taskId": 1,
+  "addressId": 1,
+  "consumerId": 1,
+  "inspectionDate": "2025-01-01",
+  "inspectionType": "SCHEDULED",
+  "notes": "Все нормально",
+  "meters": [
+    {
+      "type": "SINGLE_PHASE",
+      "serialNumber": "ABC-123",
+      "manufactureYear": 2020,
+      "verificationDate": "2024-10-01",
+      "sealState": "Исправна",
+      "transformationRatio": null
+    }
+  ]
+}
+    </textarea>
+        <button onclick="createInspection()">POST /api/acts/inspection</button>
+    </section>
+
+    <section>
+        <h2>4. Получить мои акты</h2>
+        <button onclick="loadInspectionActs()">GET /api/acts/inspection</button>
+        <button onclick="loadReplacementActs()">GET /api/acts/replacement</button>
+    </section>
+
+    <section>
+        <h2>Логи ответов</h2>
+        <pre id="log">...</pre>
+    </section>
+
+    <script>
+        const baseUrl = '';
+        let jwt = null;
+
+        function log(data) {
+            const logEl = document.getElementById('log');
+            logEl.textContent = JSON.stringify(data, null, 2);
+        }
+
+        async function api(path, options = {}) {
+            const headers = options.headers || {};
+            headers['Content-Type'] = 'application/json';
+            if (jwt) headers['Authorization'] = `Bearer ${jwt}`;
+            const response = await fetch(baseUrl + path, {...options,
+                headers
+            });
+            const text = await response.text();
+            try {
+                const json = text ? JSON.parse(text) : {};
+                log({
+                    path,
+                    status: response.status,
+                    body: json
+                });
+                if (!response.ok) throw json;
+                return json;
+            } catch (e) {
+                log({
+                    path,
+                    status: response.status,
+                    body: text
+                });
+                throw e;
+            }
+        }
+
+        async function register() {
+            const username = document.getElementById('login-username').value;
+            const password = document.getElementById('login-password').value;
+            await api('/api/auth/register', {
+                method: 'POST',
+                body: JSON.stringify({
+                    username,
+                    password,
+                    fullName: 'Тестовый Электрик',
+                    role: 'ELECTRICIAN'
+                })
+            });
+        }
+
+        async function login() {
+            const username = document.getElementById('login-username').value;
+            const password = document.getElementById('login-password').value;
+            const data = await api('/api/auth/login', {
+                method: 'POST',
+                body: JSON.stringify({
+                    username,
+                    password
+                })
+            });
+            jwt = data.token;
+            document.getElementById('token').textContent = jwt;
+        }
+
+        async function loadTasks() {
+            await api('/api/tasks');
+        }
+
+        async function updateTask() {
+            const taskId = document.getElementById('task-id').value;
+            const status = document.getElementById('task-status').value;
+            if (!taskId) return alert('Введи ID задачи');
+            await api(`/api/tasks/${taskId}/status`, {
+                method: 'PUT',
+                body: JSON.stringify({
+                    status
+                })
+            });
+        }
+
+        async function createInspection() {
+            const body = document.getElementById('inspection-json').value;
+            await api('/api/acts/inspection', {
+                method: 'POST',
+                body
+            });
+        }
+
+        async function loadInspectionActs() {
+            await api('/api/acts/inspection');
+        }
+
+        async function loadReplacementActs() {
+            await api('/api/acts/replacement');
+        }
+    </script>
+</body>
+
+</html>
