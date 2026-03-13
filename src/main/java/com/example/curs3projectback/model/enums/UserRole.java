@@ -1,8 +1,9 @@
 package com.example.curs3projectback.model.enums;
 
 public enum UserRole {
-    ELECTRICIAN,
+    SUPER_ADMIN,
+    TENANT_ADMIN,
     DISPATCHER,
-    ADMIN
+    ELECTRICIAN
 }
 

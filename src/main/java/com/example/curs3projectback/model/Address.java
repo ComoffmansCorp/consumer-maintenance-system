@@ -11,6 +11,8 @@ import lombok.*;
 @Entity
 @Table(name = "addresses")
 public class Address {
+// http://localhost:8080/demo.html
+// ./mvnw spring-boot:run
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -25,6 +27,10 @@ public class Address {
     private String building;
 
     private String apartment;
+
+    @ManyToOne(optional = false, fetch = FetchType.LAZY)
+    @JoinColumn(name = "tenant_id", nullable = false)
+    private Tenant tenant;
 
     @ManyToOne
     private Organization consumer;

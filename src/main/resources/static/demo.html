@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Electrican Work SaaS Demo</title>
+    <style>
+        :root {
+            --bg: #eef3e8;
+            --panel: rgba(255, 255, 255, 0.92);
+            --text: #183028;
+            --muted: #5f7467;
+            --accent: #0d7c66;
+            --accent-2: #f28f3b;
+            --line: rgba(24, 48, 40, 0.12);
+            --shadow: 0 18px 40px rgba(24, 48, 40, 0.12);
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: "Segoe UI", Tahoma, sans-serif;
+            color: var(--text);
+            background:
+                radial-gradient(circle at top left, rgba(242, 143, 59, 0.2), transparent 30%),
+                radial-gradient(circle at right center, rgba(13, 124, 102, 0.22), transparent 28%),
+                linear-gradient(135deg, #f4f8ef, #e8f1f0 55%, #eef2ff);
+            min-height: 100vh;
+        }
+
+        .page {
+            width: min(1280px, calc(100% - 32px));
+            margin: 24px auto 40px;
+        }
+
+        .hero {
+            display: grid;
+            grid-template-columns: 1.3fr 0.7fr;
+            gap: 18px;
+            margin-bottom: 18px;
+        }
+
+        .hero-card, .panel {
+            background: var(--panel);
+            border: 1px solid var(--line);
+            border-radius: 20px;
+            box-shadow: var(--shadow);
+            backdrop-filter: blur(14px);
+        }
+
+        .hero-card {
+            padding: 28px;
+        }
+
+        .hero h1 {
+            margin: 0 0 12px;
+            font-size: clamp(30px, 5vw, 54px);
+            line-height: 0.95;
+            letter-spacing: -0.04em;
+        }
+
+        .hero p {
+            margin: 0;
+            color: var(--muted);
+            max-width: 720px;
+            line-height: 1.5;
+        }
+
+        .badge-grid {
+            display: grid;
+            gap: 12px;
+            padding: 20px;
+        }
+
+        .badge {
+            padding: 14px 16px;
+            border-radius: 16px;
+            background: rgba(13, 124, 102, 0.08);
+            border: 1px solid rgba(13, 124, 102, 0.12);
+            font-size: 14px;
+        }
+
+        .badge strong {
+            display: block;
+            font-size: 18px;
+            margin-bottom: 4px;
+        }
+
+        .layout {
+            display: grid;
+            grid-template-columns: repeat(12, 1fr);
+            gap: 18px;
+        }
+
+        .panel {
+            padding: 20px;
+        }
+
+        .span-4 { grid-column: span 4; }
+        .span-6 { grid-column: span 6; }
+        .span-8 { grid-column: span 8; }
+        .span-12 { grid-column: span 12; }
+
+        h2 {
+            margin: 0 0 12px;
+            font-size: 20px;
+        }
+
+        .hint {
+            margin: 0 0 16px;
+            color: var(--muted);
+            font-size: 14px;
+        }
+
+        label {
+            display: block;
+            font-size: 13px;
+            font-weight: 700;
+            margin-bottom: 6px;
+        }
+
+        input, select, textarea {
+            width: 100%;
+            padding: 11px 12px;
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.9);
+            color: var(--text);
+            margin-bottom: 12px;
+        }
+
+        textarea {
+            min-height: 140px;
+            resize: vertical;
+            font-family: Consolas, monospace;
+        }
+
+        .row {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+        }
+
+        .actions {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        button {
+            border: 0;
+            border-radius: 12px;
+            padding: 11px 16px;
+            cursor: pointer;
+            font-weight: 700;
+            color: white;
+            background: linear-gradient(135deg, var(--accent), #0f5d4d);
+        }
+
+        button.secondary {
+            background: linear-gradient(135deg, var(--accent-2), #cf6a18);
+        }
+
+        .token-box, .log-box {
+            background: #14231d;
+            color: #e7f8f0;
+            border-radius: 16px;
+            padding: 14px;
+            font-family: Consolas, monospace;
+            font-size: 13px;
+            overflow: auto;
+            min-height: 120px;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+
+        .cards {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+        }
+
+        .metric {
+            padding: 16px;
+            border-radius: 16px;
+            background: rgba(13, 124, 102, 0.08);
+            border: 1px solid rgba(13, 124, 102, 0.12);
+        }
+
+        .metric strong {
+            display: block;
+            font-size: 24px;
+            margin-bottom: 4px;
+        }
+
+        @media (max-width: 960px) {
+            .hero, .layout {
+                grid-template-columns: 1fr;
+            }
+
+            .span-4, .span-6, .span-8, .span-12 {
+                grid-column: auto;
+            }
+
+            .row, .cards {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="page">
+    <section class="hero">
+        <div class="hero-card">
+            <h1>Electrician Work SaaS Demo</h1>
+            <p>
+                Демонстрационная панель для защиты проекта. Через нее можно показать multi-tenant модель,
+                авторизацию, tenant-администрирование, задачи исполнителя и простую бизнес-аналитику.
+            </p>
+        </div>
+        <div class="hero-card badge-grid">
+            <div class="badge">
+                <strong>SUPER_ADMIN</strong>
+                Логин: <code>superadmin</code><br>Пароль: <code>admin123</code>
+            </div>
+            <div class="badge">
+                <strong>TENANT_ADMIN</strong>
+                Tenant: <code>demo-energy</code><br>Логин: <code>tenantadmin</code><br>Пароль: <code>tenant123</code>
+            </div>
+            <div class="badge">
+                <strong>ELECTRICIAN</strong>
+                Tenant: <code>demo-energy</code><br>Логин: <code>electrician1</code><br>Пароль: <code>electric123</code>
+            </div>
+        </div>
+    </section>
+
+    <section class="layout">
+        <div class="panel span-4">
+            <h2>1. Логин</h2>
+            <p class="hint">Для platform user tenantCode оставь пустым.</p>
+            <label>Tenant code</label>
+            <input id="tenantCode" value="demo-energy">
+            <label>Username</label>
+            <input id="username" value="tenantadmin">
+            <label>Password</label>
+            <input id="password" type="password" value="tenant123">
+            <div class="actions">
+                <button onclick="login()">Войти</button>
+                <button class="secondary" onclick="loadStats()">Статистика</button>
+            </div>
+        </div>
+
+        <div class="panel span-8">
+            <h2>2. Токен и профиль</h2>
+            <p class="hint">После входа токен и профиль текущего пользователя будут доступны для всех остальных действий.</p>
+            <div id="profile" class="token-box">Пока нет активной сессии</div>
+        </div>
+
+        <div class="panel span-6">
+            <h2>3. Platform Admin</h2>
+            <p class="hint">Доступно только для SUPER_ADMIN.</p>
+            <label>Название tenant</label>
+            <input id="tenantName" value="Volga Energy">
+            <div class="row">
+                <div>
+                    <label>Код tenant</label>
+                    <input id="newTenantCode" value="volga-energy">
+                </div>
+                <div>
+                    <label>Тариф</label>
+                    <select id="tenantPlan">
+                        <option>FREE</option>
+                        <option selected>BUSINESS</option>
+                        <option>ENTERPRISE</option>
+                    </select>
+                </div>
+            </div>
+            <div class="actions">
+                <button onclick="listTenants()">Список tenant-ов</button>
+                <button class="secondary" onclick="createTenant()">Создать tenant</button>
+            </div>
+        </div>
+
+        <div class="panel span-6">
+            <h2>4. Tenant Admin</h2>
+            <p class="hint">Создание пользователей внутри компании.</p>
+            <div class="row">
+                <div>
+                    <label>Username</label>
+                    <input id="tenantUserName" value="electrician2">
+                </div>
+                <div>
+                    <label>Пароль</label>
+                    <input id="tenantUserPassword" value="electric123">
+                </div>
+            </div>
+            <div class="row">
+                <div>
+                    <label>ФИО</label>
+                    <input id="tenantUserFullName" value="Second Electrician">
+                </div>
+                <div>
+                    <label>Роль</label>
+                    <select id="tenantUserRole">
+                        <option>TENANT_ADMIN</option>
+                        <option>DISPATCHER</option>
+                        <option selected>ELECTRICIAN</option>
+                    </select>
+                </div>
+            </div>
+            <div class="actions">
+                <button onclick="listTenantUsers()">Список пользователей</button>
+                <button class="secondary" onclick="createTenantUser()">Создать пользователя</button>
+            </div>
+        </div>
+
+        <div class="panel span-6">
+            <h2>5. Исполнитель</h2>
+            <p class="hint">Просмотр задач и изменение статуса.</p>
+            <div class="row">
+                <div>
+                    <label>ID задачи</label>
+                    <input id="taskId" value="1">
+                </div>
+                <div>
+                    <label>Новый статус</label>
+                    <select id="taskStatus">
+                        <option>PENDING</option>
+                        <option selected>IN_PROGRESS</option>
+                        <option>COMPLETED</option>
+                        <option>CANCELED</option>
+                    </select>
+                </div>
+            </div>
+            <div class="actions">
+                <button onclick="loadTasks()">Мои задачи</button>
+                <button class="secondary" onclick="updateTask()">Обновить статус</button>
+            </div>
+        </div>
+
+        <div class="panel span-6">
+            <h2>6. Акт осмотра</h2>
+            <p class="hint">Минимальный JSON для демонстрации создания акта.</p>
+            <textarea id="inspectionPayload">{
+  "taskId": 1,
+  "addressId": 1,
+  "consumerId": 1,
+  "inspectionDate": "2026-03-10",
+  "inspectionType": "SCHEDULED",
+  "notes": "Демо осмотр через web-клиент",
+  "meters": [
+    {
+      "type": "SINGLE_PHASE",
+      "serialNumber": "DEMO-100",
+      "manufactureYear": 2024,
+      "verificationDate": "2025-10-01",
+      "sealState": "sealed",
+      "transformationRatio": 1
+    }
+  ]
+}</textarea>
+            <div class="actions">
+                <button onclick="loadInspectionActs()">Мои акты осмотра</button>
+                <button class="secondary" onclick="createInspection()">Создать акт</button>
+            </div>
+        </div>
+
+        <div class="panel span-12">
+            <h2>7. Бизнес-метрики</h2>
+            <div class="cards">
+                <div class="metric"><strong id="metricUsers">0</strong>Активные пользователи</div>
+                <div class="metric"><strong id="metricTasks">0</strong>Всего задач</div>
+                <div class="metric"><strong id="metricRevenue">0</strong>Оценка выручки</div>
+            </div>
+        </div>
+
+        <div class="panel span-12">
+            <h2>8. Ответ API</h2>
+            <div id="log" class="log-box">Здесь будет последний ответ сервера</div>
+        </div>
+    </section>
+</div>
+
+<script>
+    let token = null;
+    let authData = null;
+
+    function setLog(data) {
+        document.getElementById('log').textContent = typeof data === 'string' ? data : JSON.stringify(data, null, 2);
+    }
+
+    function setProfile(data) {
+        authData = data;
+        document.getElementById('profile').textContent = JSON.stringify(data, null, 2);
+    }
+
+    async function api(path, options = {}) {
+        const headers = options.headers || {};
+        if (!(options.body instanceof FormData)) {
+            headers['Content-Type'] = 'application/json';
+        }
+        if (token) {
+            headers['Authorization'] = `Bearer ${token}`;
+        }
+        const response = await fetch(path, { ...options, headers });
+        const text = await response.text();
+        const payload = text ? (() => {
+            try { return JSON.parse(text); } catch { return text; }
+        })() : {};
+
+        setLog({ path, status: response.status, body: payload });
+        if (!response.ok) {
+            throw payload;
+        }
+        return payload;
+    }
+
+    async function login() {
+        const tenantCode = document.getElementById('tenantCode').value.trim();
+        const username = document.getElementById('username').value.trim();
+        const password = document.getElementById('password').value;
+        const payload = { username, password };
+        if (tenantCode) payload.tenantCode = tenantCode;
+        const data = await api('/api/auth/login', {
+            method: 'POST',
+            body: JSON.stringify(payload)
+        });
+        token = data.token;
+        setProfile(data);
+    }
+
+    async function listTenants() {
+        await api('/api/platform/tenants');
+    }
+
+    async function createTenant() {
+        await api('/api/platform/tenants', {
+            method: 'POST',
+            body: JSON.stringify({
+                name: document.getElementById('tenantName').value.trim(),
+                code: document.getElementById('newTenantCode').value.trim(),
+                plan: document.getElementById('tenantPlan').value
+            })
+        });
+    }
+
+    async function listTenantUsers() {
+        await api('/api/tenant/users');
+    }
+
+    async function createTenantUser() {
+        await api('/api/tenant/users', {
+            method: 'POST',
+            body: JSON.stringify({
+                username: document.getElementById('tenantUserName').value.trim(),
+                password: document.getElementById('tenantUserPassword').value,
+                fullName: document.getElementById('tenantUserFullName').value.trim(),
+                role: document.getElementById('tenantUserRole').value
+            })
+        });
+    }
+
+    async function loadTasks() {
+        await api('/api/tasks');
+    }
+
+    async function updateTask() {
+        const taskId = document.getElementById('taskId').value.trim();
+        await api(`/api/tasks/${taskId}/status`, {
+            method: 'PUT',
+            body: JSON.stringify({ status: document.getElementById('taskStatus').value })
+        });
+    }
+
+    async function createInspection() {
+        await api('/api/acts/inspection', {
+            method: 'POST',
+            body: document.getElementById('inspectionPayload').value
+        });
+    }
+
+    async function loadInspectionActs() {
+        await api('/api/acts/inspection');
+    }
+
+    async function loadStats() {
+        const stats = await api('/api/stats/overview');
+        document.getElementById('metricUsers').textContent = stats.activeUsers;
+        document.getElementById('metricTasks').textContent = stats.totalTasks;
+        document.getElementById('metricRevenue').textContent = Number(stats.estimatedRevenue || 0).toLocaleString('ru-RU') + ' ₽';
+    }
+</script>
+</body>
+</html>

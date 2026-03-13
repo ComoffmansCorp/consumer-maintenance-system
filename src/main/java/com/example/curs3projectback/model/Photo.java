@@ -21,6 +21,10 @@ public class Photo {
 
     private String note;
 
+    @ManyToOne(optional = false, fetch = FetchType.LAZY)
+    @JoinColumn(name = "tenant_id", nullable = false)
+    private Tenant tenant;
+
     @ManyToOne
     @JoinColumn(name = "inspection_act_id")
     private InspectionAct inspectionAct;

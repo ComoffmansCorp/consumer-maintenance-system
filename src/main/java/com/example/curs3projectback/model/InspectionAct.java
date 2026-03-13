@@ -25,6 +25,10 @@ public class InspectionAct {
     @JoinColumn(name = "task_id")
     private Task task;
 
+    @ManyToOne(optional = false, fetch = FetchType.LAZY)
+    @JoinColumn(name = "tenant_id", nullable = false)
+    private Tenant tenant;
+
     @ManyToOne(optional = false)
     private Address address;
 

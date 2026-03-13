@@ -1,0 +1,3 @@
+CREATE DATABASE curs3_saas
+    WITH
+    ENCODING = 'UTF8';

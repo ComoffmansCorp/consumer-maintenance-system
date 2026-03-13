@@ -15,17 +15,35 @@ import java.util.List;
 @RequiredArgsConstructor
 public class UserDetailsServiceImpl implements UserDetailsService {
 
+    private static final String LOGIN_SEPARATOR = "::";
+
     private final UserRepository userRepository;
 
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        var user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new UsernameNotFoundException("Пользователь не найден"));
+        var user = isNumeric(username)
+                ? userRepository.findById(Long.parseLong(username))
+                : username.contains(LOGIN_SEPARATOR)
+                ? userRepository.findByTenant_CodeIgnoreCaseAndUsernameIgnoreCase(
+                        username.substring(0, username.indexOf(LOGIN_SEPARATOR)),
+                        username.substring(username.indexOf(LOGIN_SEPARATOR) + LOGIN_SEPARATOR.length())
+                )
+                : userRepository.findByTenantIsNullAndUsernameIgnoreCase(username);
+
+        var resolvedUser = user.orElseThrow(() -> new UsernameNotFoundException("User not found"));
         return new User(
-                user.getUsername(),
-                user.getPassword(),
-                List.of(new SimpleGrantedAuthority("ROLE_" + user.getRole().name()))
+                String.valueOf(resolvedUser.getId()),
+                resolvedUser.getPassword(),
+                List.of(new SimpleGrantedAuthority("ROLE_" + resolvedUser.getRole().name()))
         );
     }
-}
 
+    private boolean isNumeric(String value) {
+        try {
+            Long.parseLong(value);
+            return true;
+        } catch (NumberFormatException ex) {
+            return false;
+        }
+    }
+}

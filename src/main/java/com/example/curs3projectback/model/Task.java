@@ -24,6 +24,10 @@ public class Task {
     @Column(nullable = false)
     private TaskType type;
 
+    @ManyToOne(optional = false, fetch = FetchType.LAZY)
+    @JoinColumn(name = "tenant_id", nullable = false)
+    private Tenant tenant;
+
     @ManyToOne(optional = false)
     private Address address;
 
