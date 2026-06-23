@@ -1,0 +1,3 @@
+-- Demo data is created by DemoDataInitializer.java on application startup.
+-- All demo accounts use password: demo123
+-- Superadmin uses password: admin123

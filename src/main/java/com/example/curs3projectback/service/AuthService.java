@@ -77,6 +77,7 @@ public class AuthService {
         return buildAuthResponse(superAdmin);
     }
 
+    @Transactional
     public AuthResponse login(LoginRequest request) {
         String loginKey = buildLoginKey(request);
         log.info("Authenticating username={} tenantCode={}", request.getUsername(), request.getTenantCode());

@@ -11,18 +11,24 @@ services:
       - db-data:/var/lib/postgresql/data
     ports:
       - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   app:
     build:
       context: .
       dockerfile: Dockerfile
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     environment:
       DB_URL: jdbc:postgresql://db:5432/curs3
       DB_USERNAME: postgres
       DB_PASSWORD: postgres
-      JWT_SECRET: ZmQ0ZGI5NjQ0MDQwY2I4MjMxY2Y3ZmI3MjdhN2ZmMjNhODViOTg1ZGE0NTBjMGM4NDA5NzYxMjdjOWMwYWRmZAoKQ1NIZFV0bGtLSmRWVmhRPT0KVGhpcyBpcyBhIHZlcnkgbG9uZyBhbmQgc2VjdXJlIHNlY3JldCBrZXkgZm9yIEpXVCBhdXRoZW50aWNhdGlvbiBpbiBteSBTcHJpbmcgQm9vdCBhcHBsaWNhdGlvbjIwMjQ=
+      JWT_SECRET: 5enjbH5/KpbWF7r4fZ6/ChiRbEjXfnOBr85Xxq9mBRo=
       FILE_UPLOAD_DIR: uploads
     ports:
       - "8080:8080"

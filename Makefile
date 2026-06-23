@@ -1,6 +1,6 @@
 SHELL := /bin/zsh
 
-.PHONY: help build run docker-build docker-up docker-down clean test
+.PHONY: help build run docker-build docker-up docker-down docker-fresh clean test
 
 help:
 	@echo "Available targets:"
@@ -16,7 +16,7 @@ build:
 	./mvnw clean package
 
 run: build
-	java -jar target/curs3ProjectBack-0.0.1-SNAPSHOT.jar
+	DB_URL=jdbc:postgresql://localhost:5432/curs3 JWT_SECRET=5enjbH5/KpbWF7r4fZ6/ChiRbEjXfnOBr85Xxq9mBRo= java -jar target/curs3ProjectBack-0.0.1-SNAPSHOT.jar
 
 docker-build:
 	docker build -t curs3projectback .
@@ -26,6 +26,10 @@ docker-up:
 
 docker-down:
 	docker compose down
+
+docker-fresh:
+	docker compose down -v
+	docker compose up --build
 
 clean:
 	./mvnw clean

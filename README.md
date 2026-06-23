@@ -1,319 +1,121 @@
 # Consumer Maintenance System
 
-Java Spring Boot backend для управления задачами, актами осмотра/замены и учётом счётчиков.
+Java Spring Boot backend для управления задачами, актами осмотра и замены, учётом организаций, адресов и счётчиков.
+
+## Что есть в проекте
+
+- `Dockerfile` — сборка образа приложения на Java 17.
+- `docker-compose.yml` — запуск PostgreSQL и приложения вместе.
+- `Makefile` — простые цели для сборки, запуска, тестов и Docker.
+- `src/main/resources/db/migration/V1__init.sql` — SQL-миграции для создания таблиц.
+- `src/main/resources/static/test-client.html` — простой тестовый фронтенд для проверки API.
+- `uploads/` — директория для загружаемых файлов.
 
 ## Быстрый запуск
 
-### 1. Собрать и запустить в Docker
+### Через Docker
+
 ```bash
-docker compose up --build
+make docker-up
 ```
 
-Приложение будет доступно на `http://localhost:8080`.
-Для тестирования ручек открой `http://localhost:8080/test-client.html`.
+После запуска приложение доступно по адресу:
 
-### 2. Остановить контейнеры
+- `http://localhost:8080`
+- `http://localhost:8080/test-client.html` — тестовая страница для API.
+
+Остановить контейнеры:
+
 ```bash
-docker compose down
+make docker-down
 ```
 
-## Конфигурация
+### Локально без Docker
 
-Сервис читает параметры из `src/main/resources/application.properties` и из переменных окружения:
+```bash
+make run
+```
 
-- `DB_URL` - URL базы данных PostgreSQL
-- `DB_USERNAME` - имя пользователя базы
-- `DB_PASSWORD` - пароль базы
-- `JWT_SECRET` - секрет для JWT
-- `FILE_UPLOAD_DIR` - директория для загрузки файлов
+Команда `run` сначала выполняет `./mvnw clean package`, а затем запускает приложение с переменными окружения:
 
-По умолчанию приложение подключается к `jdbc:postgresql://localhost:5432/curs3`.
+- `DB_URL=jdbc:postgresql://localhost:5432/curs3`
+- `JWT_SECRET=5enjbH5/KpbWF7r4fZ6/ChiRbEjXfnOBr85Xxq9mBRo=`
 
-## Docker
+Если вы хотите запустить приложение локально, убедитесь, что PostgreSQL доступен на `localhost:5432`.
 
-В репозитории добавлены:
-- `Dockerfile` — сборка образа приложения
-- `docker-compose.yml` — запуск приложения и PostgreSQL
-- `.dockerignore` — исключение лишних файлов из образа
+## Makefile targets
 
-### Как это работает
+- `make build` — сборка проекта Maven.
+- `make run` — локальный запуск приложения.
+- `make docker-build` — сборка Docker-образа `curs3projectback`.
+- `make docker-up` — запуск приложения и PostgreSQL через `docker compose`.
+- `make docker-down` — остановка контейнеров.
+- `make clean` — очистка Maven-артефактов.
+- `make test` — запуск тестов.
 
-- PostgreSQL создаёт базу `curs3`.
-- Приложение подключается к контейнеру `db`.
-- Flyway выполняет миграции при старте.
+## Docker Compose
+
+`docker-compose.yml` настраивает два сервиса:
+
+- `db` — PostgreSQL 16 с базой `curs3` и пользователем `postgres`.
+- `app` — приложение, которое собирается из `Dockerfile` и подключается к базе.
+
+Переменные окружения для сервиса `app`:
+
+- `DB_URL=jdbc:postgresql://db:5432/curs3`
+- `DB_USERNAME=postgres`
+- `DB_PASSWORD=postgres`
+- `JWT_SECRET=5enjbH5/KpbWF7r4fZ6/ChiRbEjXfnOBr85Xxq9mBRo=`
+- `FILE_UPLOAD_DIR=uploads`
 
 ## Миграции базы данных
 
-Миграции находятся в `src/main/resources/db/migration/`.
-Первая миграция создаёт все таблицы и индексы для проекта.
+Главная миграция хранится в:
 
-## Локальный запуск без Docker
+- `src/main/resources/db/migration/V1__init.sql`
+
+Это создаёт все таблицы и индексы для проекта, включая `tenants`, `users`, `organizations`, `addresses`, `tasks`, `inspection_acts`, `replacement_acts`, `meters` и `photos`.
+
+## Конфигурация приложения
+
+Файл конфигурации:
+
+- `src/main/resources/application.properties`
+
+Основные параметры:
+
+- `spring.datasource.url=${DB_URL:jdbc:postgresql://localhost:5432/curs3}`
+- `spring.datasource.username=${DB_USERNAME:postgres}`
+- `spring.datasource.password=${DB_PASSWORD:postgres}`
+- `file.upload-dir=${FILE_UPLOAD_DIR:uploads}`
+- `jwt.secret` и `jwt.expiration`
+
+> В текущей конфигурации `spring.jpa.hibernate.ddl-auto=create-drop`, поэтому схема создаётся и удаляется при запуске.
+
+## Тестовый фронтенд
+
+Откройте `http://localhost:8080/test-client.html` после запуска приложения. Это простой интерфейс для проверки:
+
+- авторизации и регистрации
+- создания задач
+- работы с актами осмотра и замены
+- админских эндпоинтов
+
+## Полезные пути
+
+- `src/main/java` — Java-код сервиса.
+- `src/main/resources/static/test-client.html` — статический тестовый клиент.
+- `src/main/resources/db/migration` — миграции базы.
+- `docker-compose.yml` — Docker Compose конфигурация.
+- `Dockerfile` — Docker-сборка приложения.
+- `Makefile` — удобные команды.
+
+## Запуск тестов
 
 ```bash
-./mvnw clean package
-java -jar target/curs3ProjectBack-0.0.1-SNAPSHOT.jar
+make test
 ```
 
-## Важно
+## Контакты
 
-- `spring.jpa.hibernate.ddl-auto=validate` работает вместе с Flyway.
-- `spring.sql.init.mode=never` отключает автозапуск `schema.sql`.
-
-## Структура проекта
-
-- `src/main/java` — бизнес-логика и REST API
-- `src/main/resources` — конфигурация и миграции
-- `pom.xml` — сборка Maven
-- `Dockerfile` — сборка образа приложения
-- `docker-compose.yml` — запуск приложения и PostgreSQL
-
-## Поддержка
-
-Измените настройки подключения через переменные окружения в `docker-compose.yml` при необходимости.
-
-- Flyway миграции
-- Интеграционные тесты
-- Оптимизация запросов
-- Кэширование
-- Frontend на React
-
----
-
-## 👨‍💻 Автор
-ComoffmansCorp
-
----
-
-## ⭐ Поставь звёздочку, если проект понравился!  
-# ⚡ Meter Management System
-Современная система для управления задачами, актами осмотра/замены и учётом электросчётчиков.  
-Проект построен на базе Java Spring Boot и предоставляет полноценный REST API для работы с объектами учета.
-
----
-
-## 🚀 Возможности системы
-
-### 👤 Пользователи
-- Авторизация по JWT
-- Роли (admin / worker / user)
-- Хранение профилей и доступов
-
-### 🏢 Организации и потребители
-- Учёт организаций
-- Адреса объектов обслуживания
-- Привязка к потребителям
-
-### 📦 Задачи
-- Создание задач (осмотр или замена счётчика)
-- Назначение исполнителей
-- Контроль статусов
-- Привязка к адресам и объектам
-
-### 📝 Акты
-#### 🔍 Inspection Acts
-- Данные осмотра
-- Фотофиксация
-- Дата, тип, комментарии
-
-#### 🔧 Replacement Acts
-- Замена счётчика
-- Старые/новые показания
-- Даты установки, номера, марки
-
-### 🔌 Учёт счётчиков
-- Производитель
-- Тип
-- Серийный номер
-- Дата поверки и установки
-- Пломбы и коэффициенты
-
----
-
-## 🏗️ Технологический стек
-
-Backend:
-- Java 17
-- Spring Boot (Web, Security, Data JPA)
-- Lombok
-- JWT
-- Validation API
-
-Database:
-- PostgreSQL
-
-DevOps:
-- Docker
-- Maven
-- Git
-
----
-
-## 📂 Структура проекта
-
-meter-management-system/  
-├── src/  
-│   ├── main/  
-│   │   ├── java/...  
-│   │   └── resources/  
-│   └── test/  
-├── db/  
-│   ├── schema.sql  
-│   └── data.sql  
-├── docker-compose.yml  
-├── .gitignore  
-├── README.md  
-└── pom.xml
-
----
-
-## 🗄️ Структура базы данных
-
----
-
-### Таблицы
-
-#### users
-- id
-- username
-- password
-- full_name
-- role
-
-#### addresses
-- id
-- street
-- house
-- building
-- apartment
-- consumer_id
-
-#### tasks
-- id
-- type
-- status
-- due_date
-- address_id
-- assignee_id
-
-#### inspection_acts
-- id
-- task_id
-- address_id
-- inspection_date
-- inspection_type
-- consumer_id
-- notes
-
-#### replacement_acts
-- id
-- task_id
-- address_id
-- installation_date
-- old_brand
-- old_serial_number
-- old_readings
-- new_brand
-- new_serial_number
-- new_readings
-
-#### meters
-- id
-- type
-- serial_number
-- manufacturer_year
-- verification_date
-- seal_state
-- transformation_ratio
-- consumer_id
-
-#### photos
-- id
-- filename
-- note
-- inspection_act_id
-- replacement_act_id
-
----
-
-## 🐳 Запуск через Docker
-
-### PostgreSQL
-Создай файл docker-compose.yml:
-
-version: "3.9"  
-services:  
-database:  
-image: postgres:16  
-container_name: meter-db  
-environment:  
-POSTGRES_DB: meter  
-POSTGRES_USER: postgres  
-POSTGRES_PASSWORD: postgres  
-ports:  
-- "5432:5432"  
-volumes:  
-- ./db:/docker-entrypoint-initdb.d
-
-Запуск:
-
-docker-compose up -d
-
----
-
-## 🔧 Запуск backend
-
-mvn spring-boot:run
-
-или
-
-mvn clean package  
-java -jar target/meter-management-system.jar
-
----
-
-## 🔑 Конфигурация
-
-Используй переменные окружения:
-
-DB_URL  
-DB_USER  
-DB_PASSWORD  
-JWT_SECRET
-
-Пример в application.properties:
-
-spring.datasource.url=${DB_URL}  
-spring.datasource.username=${DB_USER}  
-spring.datasource.password=${DB_PASSWORD}  
-jwt.secret=${JWT_SECRET}
-
----
-
-## 🧪 Тестирование API
-
-Можно тестировать через:
-- Postman
-- Insomnia
-- Swagger (если добавить)
-
----
-
-## 📘 Планы на развитие
-
-- Swagger/OpenAPI
-- Dockerfile для backend
-- Flyway миграции
-- Интеграционные тесты
-- Оптимизация запросов
-- Кэширование
-- Frontend на React
-
----
-
-## 👨‍💻 Автор
-ComoffmansCorp
-
----
-
-## ⭐ Поставь звёздочку, если проект понравился!  
-
+Если нужно добавить документацию по API или фронтенду — просто дополни `README.md` новыми разделами.

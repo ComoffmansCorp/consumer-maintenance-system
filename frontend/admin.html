@@ -1,0 +1,743 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>CMS Admin Panel</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"/>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet"/>
+  <style>
+    :root{--sb:240px;--sbBg:#0f172a;--sbHover:#1e293b;--sbActive:#1d4ed8;--acc:#3b82f6;--hh:60px}
+    *{box-sizing:border-box}
+    body{margin:0;font-family:'Segoe UI',system-ui,sans-serif;background:#f1f5f9;color:#1e293b;display:flex;min-height:100vh}
+
+    /* Sidebar */
+    .sb{width:var(--sb);background:var(--sbBg);display:flex;flex-direction:column;position:fixed;top:0;left:0;bottom:0;z-index:100}
+    .sb-logo{height:var(--hh);display:flex;align-items:center;gap:10px;padding:0 18px;border-bottom:1px solid #1e293b}
+    .sb-logo .ic{width:32px;height:32px;background:var(--acc);border-radius:8px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:.9rem}
+    .sb-logo span{font-weight:700;font-size:.95rem;color:#f8fafc}
+    .sb-logo small{display:block;font-size:.6rem;color:#64748b}
+    .sb-sec{padding:16px 12px 4px;font-size:.6rem;font-weight:700;letter-spacing:1px;color:#475569;text-transform:uppercase}
+    .nav-it{display:flex;align-items:center;gap:10px;padding:9px 14px;margin:1px 8px;border-radius:8px;color:#94a3b8;font-size:.85rem;cursor:pointer;transition:.15s;user-select:none}
+    .nav-it:hover{background:var(--sbHover);color:#e2e8f0}
+    .nav-it.active{background:var(--sbActive);color:#fff}
+    .nav-it i{font-size:.95rem;width:20px;text-align:center}
+    .sb-foot{margin-top:auto;padding:12px;border-top:1px solid #1e293b}
+    .user-pill{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;background:#1e293b}
+    .user-av{width:32px;height:32px;background:var(--acc);border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;color:#fff;font-size:.8rem;flex-shrink:0}
+    .user-name{font-size:.8rem;font-weight:600;color:#f1f5f9}
+    .user-role{font-size:.68rem;color:#64748b}
+
+    /* Main */
+    .main{margin-left:var(--sb);flex:1;display:flex;flex-direction:column}
+    .topbar{height:var(--hh);background:#fff;border-bottom:1px solid #e2e8f0;display:flex;align-items:center;justify-content:space-between;padding:0 24px;position:sticky;top:0;z-index:50}
+    .tb-title{font-size:1.1rem;font-weight:700;color:#0f172a}
+    .tb-right{display:flex;align-items:center;gap:10px}
+    .tb-btn{width:34px;height:34px;border-radius:8px;border:1px solid #e2e8f0;background:#fff;display:flex;align-items:center;justify-content:center;color:#64748b;cursor:pointer;position:relative}
+    .tb-btn:hover{background:#f8fafc}
+    .badge-dot{position:absolute;top:7px;right:7px;width:6px;height:6px;background:#ef4444;border-radius:50%;border:1.5px solid #fff}
+    .content{padding:24px}
+
+    /* Stat cards */
+    .stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px}
+    .stat-card{background:#fff;border-radius:14px;padding:20px;border:1px solid #e2e8f0;display:flex;flex-direction:column;gap:12px}
+    .sc-top{display:flex;justify-content:space-between;align-items:flex-start}
+    .sc-label{font-size:.75rem;color:#64748b;font-weight:500}
+    .sc-icon{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:.95rem}
+    .sc-val{font-size:1.8rem;font-weight:800;color:#0f172a;line-height:1}
+    .sc-sub{font-size:.72rem;color:#64748b;margin-top:2px}
+    .trend{display:flex;align-items:center;gap:3px;font-size:.72rem;font-weight:600}
+    .trend.up{color:#10b981}.trend.neutral{color:#64748b}
+    .ic-blue{background:#eff6ff;color:#3b82f6}.ic-green{background:#f0fdf4;color:#10b981}
+    .ic-orange{background:#fff7ed;color:#f97316}.ic-purple{background:#faf5ff;color:#8b5cf6}
+
+    /* Section */
+    .sec-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+    .sec-title{font-size:.95rem;font-weight:700;color:#0f172a}
+    .card-wrap{background:#fff;border-radius:14px;border:1px solid #e2e8f0;overflow:hidden;margin-bottom:20px}
+
+    /* Table */
+    .table{margin:0;font-size:.85rem}
+    .table th{background:#f8fafc;color:#475569;font-weight:600;font-size:.72rem;text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid #e2e8f0;padding:11px 16px}
+    .table td{padding:13px 16px;vertical-align:middle;border-color:#f1f5f9;color:#1e293b}
+    .table tbody tr:hover{background:#f8fafc}
+    .table tbody tr:last-child td{border-bottom:none}
+
+    /* Badges */
+    .bp{padding:3px 9px;border-radius:20px;font-size:.7rem;font-weight:700;letter-spacing:.3px}
+    .plan-free{background:#f1f5f9;color:#64748b}.plan-business{background:#eff6ff;color:#1d4ed8}.plan-enterprise{background:#faf5ff;color:#7c3aed}
+    .br{padding:3px 9px;border-radius:20px;font-size:.7rem;font-weight:600}
+    .role-superadmin{background:#fef3c7;color:#92400e}.role-tenantadmin{background:#eff6ff;color:#1d4ed8}.role-dispatcher{background:#f0fdf4;color:#166534}.role-electrician{background:#fdf2f8;color:#86198f}
+    .bs{padding:3px 9px;border-radius:20px;font-size:.7rem;font-weight:600}
+    .s-pending{background:#fef9c3;color:#854d0e}.s-inprogress{background:#eff6ff;color:#1d4ed8}.s-completed{background:#f0fdf4;color:#166534}.s-canceled{background:#fff1f2;color:#9f1239}
+    .ba{padding:3px 9px;border-radius:20px;font-size:.7rem;font-weight:600}
+    .active-y{background:#f0fdf4;color:#166534}.active-n{background:#fff1f2;color:#9f1239}
+
+    .act-btn{width:28px;height:28px;border-radius:7px;border:1px solid #e2e8f0;background:#fff;display:inline-flex;align-items:center;justify-content:center;color:#64748b;cursor:pointer;font-size:.82rem;transition:.15s}
+    .act-btn:hover{background:#f1f5f9;color:#0f172a}
+    .act-btn.danger:hover{background:#fff1f2;color:#ef4444;border-color:#fecaca}
+
+    /* Tab pages */
+    .tab-page{display:none}.tab-page.active{display:block}
+
+    /* Filter bar */
+    .fbar{display:flex;gap:8px;align-items:center}
+    .si{border:1px solid #e2e8f0;border-radius:8px;padding:6px 10px 6px 30px;font-size:.82rem;background:#f8fafc url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='13' height='13' fill='%2394a3b8' viewBox='0 0 16 16'%3E%3Cpath d='M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398l3.85 3.85a1 1 0 0 0 1.415-1.415l-3.868-3.833zm-5.242 1.1a5.5 5.5 0 1 1 0-11 5.5 5.5 0 0 1 0 11z'/%3E%3C/svg%3E") no-repeat 10px center;width:200px;outline:none}
+    .si:focus{border-color:var(--acc);background-color:#fff}
+    .fs{border:1px solid #e2e8f0;border-radius:8px;padding:6px 10px;font-size:.82rem;background:#f8fafc;outline:none;color:#475569}
+
+    /* Buttons */
+    .btn-p{background:var(--acc);color:#fff;border:none;border-radius:8px;padding:7px 14px;font-size:.82rem;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:5px;transition:.15s}
+    .btn-p:hover{background:#2563eb}
+    .btn-g{background:#fff;color:#475569;border:1px solid #e2e8f0;border-radius:8px;padding:7px 12px;font-size:.82rem;cursor:pointer;display:inline-flex;align-items:center;gap:5px;transition:.15s}
+    .btn-g:hover{background:#f8fafc}
+
+    /* Modal */
+    .modal-content{border-radius:14px;border:none}
+    .modal-header{border-bottom:1px solid #f1f5f9;padding:18px 22px 14px}
+    .modal-title{font-weight:700;font-size:.95rem}
+    .modal-body{padding:18px 22px}
+    .modal-footer{border-top:1px solid #f1f5f9;padding:14px 22px}
+    .form-label{font-size:.78rem;font-weight:600;color:#475569;margin-bottom:4px}
+    .form-control,.form-select{border:1px solid #e2e8f0;border-radius:8px;font-size:.85rem;padding:8px 11px}
+    .form-control:focus,.form-select:focus{border-color:var(--acc);box-shadow:0 0 0 3px rgba(59,130,246,.1)}
+
+    /* Progress */
+    .progress{height:6px;border-radius:3px}.progress-bar{border-radius:3px}
+    .tm{font-size:.72rem;color:#94a3b8;margin-top:1px}
+    .ov-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px}
+
+    /* Login overlay */
+    #login-overlay{position:fixed;inset:0;background:rgba(15,23,42,.85);z-index:9999;display:flex;align-items:center;justify-content:center}
+    .login-box{background:#fff;border-radius:16px;padding:36px;width:400px;box-shadow:0 20px 60px rgba(0,0,0,.3)}
+    .login-box h2{font-size:1.3rem;font-weight:800;margin-bottom:4px;color:#0f172a}
+    .login-box p{font-size:.85rem;color:#64748b;margin-bottom:24px}
+    .login-err{color:#ef4444;font-size:.8rem;margin-top:8px;display:none}
+
+    /* Loading */
+    .loading{text-align:center;padding:48px;color:#94a3b8}
+    .loading i{font-size:2rem;margin-bottom:12px;display:block;animation:spin 1s linear infinite}
+    @keyframes spin{to{transform:rotate(360deg)}}
+
+    /* Overview two col */
+  </style>
+</head>
+<body>
+
+<!-- ── Login overlay ────────────────────────────────────────────────────────── -->
+<div id="login-overlay">
+  <div class="login-box">
+    <h2><i class="bi bi-lightning-charge-fill" style="color:#3b82f6"></i> CMS Admin</h2>
+    <p>Войдите как Super Admin для доступа к панели управления</p>
+    <div class="mb-3">
+      <label class="form-label">Имя пользователя</label>
+      <input id="l-user" class="form-control" value="superadmin" placeholder="superadmin"/>
+    </div>
+    <div class="mb-3">
+      <label class="form-label">Пароль</label>
+      <input id="l-pass" class="form-control" type="password" value="super123" placeholder="••••••"/>
+    </div>
+    <div id="l-err" class="login-err"><i class="bi bi-exclamation-circle"></i> <span id="l-msg"></span></div>
+    <div style="display:flex;gap:10px;margin-top:20px;align-items:center">
+      <button class="btn-p" style="flex:1;justify-content:center;padding:10px" onclick="doLogin()">
+        <i class="bi bi-box-arrow-in-right"></i> Войти
+      </button>
+      <button class="btn-g" onclick="doBootstrap()" title="Создать superadmin через /api/auth/bootstrap-super-admin">
+        <i class="bi bi-magic"></i> Bootstrap
+      </button>
+    </div>
+    <div style="font-size:.72rem;color:#94a3b8;margin-top:12px;text-align:center">
+      Если superadmin не существует — нажмите Bootstrap, затем Войти
+    </div>
+  </div>
+</div>
+
+<!-- ── Sidebar ────────────────────────────────────────────────────────────────── -->
+<aside class="sb" id="sidebar" style="display:none">
+  <div class="sb-logo">
+    <div class="ic"><i class="bi bi-lightning-charge-fill"></i></div>
+    <div><span>CMS Admin</span><small>Super Admin Panel</small></div>
+  </div>
+  <div class="sb-sec">Платформа</div>
+  <div class="nav-it active" onclick="showTab('dashboard',this)"><i class="bi bi-grid-1x2"></i> Дашборд</div>
+  <div class="nav-it" onclick="showTab('tenants',this)"><i class="bi bi-building"></i> Тенанты</div>
+  <div class="sb-sec">Управление</div>
+  <div class="nav-it" onclick="showTab('users',this)"><i class="bi bi-people"></i> Пользователи</div>
+  <div class="nav-it" onclick="showTab('tasks',this)"><i class="bi bi-clipboard-check"></i> Задачи</div>
+  <div class="nav-it" onclick="showTab('acts',this)"><i class="bi bi-file-earmark-text"></i> Акты</div>
+  <div class="sb-sec">Система</div>
+  <div class="nav-it" onclick="showTab('settings',this)"><i class="bi bi-gear"></i> Настройки</div>
+  <div class="sb-foot">
+    <div class="user-pill">
+      <div class="user-av" id="sb-av">SA</div>
+      <div><div class="user-name" id="sb-name">superadmin</div><div class="user-role">SUPER_ADMIN</div></div>
+      <i class="bi bi-box-arrow-right ms-auto" style="color:#475569;cursor:pointer" onclick="logout()" title="Выйти"></i>
+    </div>
+  </div>
+</aside>
+
+<!-- ── Main ─────────────────────────────────────────────────────────────────── -->
+<div class="main" id="main-content" style="display:none">
+  <header class="topbar">
+    <div class="tb-title" id="topbar-title">Дашборд</div>
+    <div class="tb-right">
+      <div class="tb-btn"><i class="bi bi-arrow-clockwise" onclick="reloadCurrentTab()" title="Обновить"></i></div>
+      <div class="tb-btn"><i class="bi bi-bell"></i><span class="badge-dot"></span></div>
+      <div style="width:1px;height:22px;background:#e2e8f0;margin:0 4px"></div>
+      <div style="font-size:.78rem;color:#64748b;">Consumer Maintenance System</div>
+    </div>
+  </header>
+
+  <div class="content">
+
+    <!-- ══ DASHBOARD ══ -->
+    <div class="tab-page active" id="tab-dashboard">
+      <div class="stat-grid" id="stat-grid">
+        <div class="loading"><i class="bi bi-arrow-repeat"></i>Загрузка…</div>
+      </div>
+      <div class="ov-grid" id="ov-grid"></div>
+      <div class="sec-hdr">
+        <div class="sec-title">Тенанты платформы</div>
+        <button class="btn-g" onclick="showTab('tenants', document.querySelector('.nav-it:nth-child(2)'))">Все тенанты <i class="bi bi-arrow-right"></i></button>
+      </div>
+      <div class="card-wrap"><div id="dash-tenants-table"></div></div>
+    </div>
+
+    <!-- ══ TENANTS ══ -->
+    <div class="tab-page" id="tab-tenants">
+      <div class="sec-hdr">
+        <div class="fbar">
+          <input class="si" type="text" placeholder="Поиск по названию или коду…" oninput="filterTable('tenants-tbody', this.value, [1,2])"/>
+          <select class="fs" onchange="filterTable('tenants-tbody', this.value, [3])">
+            <option value="">Все тарифы</option>
+            <option>FREE</option><option>BUSINESS</option><option>ENTERPRISE</option>
+          </select>
+        </div>
+        <button class="btn-p" data-bs-toggle="modal" data-bs-target="#modalTenant">
+          <i class="bi bi-plus-lg"></i> Добавить тенант
+        </button>
+      </div>
+      <div class="card-wrap"><div id="tenants-table"></div></div>
+    </div>
+
+    <!-- ══ USERS ══ -->
+    <div class="tab-page" id="tab-users">
+      <div class="sec-hdr">
+        <div class="fbar">
+          <input class="si" type="text" placeholder="Поиск по имени или логину…" oninput="filterTable('users-tbody', this.value, [1,2])"/>
+          <select class="fs" onchange="filterTable('users-tbody', this.value, [3])">
+            <option value="">Все роли</option>
+            <option>TENANT_ADMIN</option><option>DISPATCHER</option><option>ELECTRICIAN</option>
+          </select>
+          <select class="fs" id="tenant-filter-users" onchange="filterTable('users-tbody', this.value, [4])">
+            <option value="">Все тенанты</option>
+          </select>
+        </div>
+      </div>
+      <div class="card-wrap"><div id="users-table"></div></div>
+    </div>
+
+    <!-- ══ TASKS ══ -->
+    <div class="tab-page" id="tab-tasks">
+      <div class="sec-hdr">
+        <div class="fbar">
+          <input class="si" type="text" placeholder="Поиск по адресу…" oninput="filterTable('tasks-tbody', this.value, [2,3])"/>
+          <select class="fs" onchange="filterTable('tasks-tbody', this.value, [5])">
+            <option value="">Все статусы</option>
+            <option>PENDING</option><option>IN_PROGRESS</option><option>COMPLETED</option><option>CANCELED</option>
+          </select>
+          <select class="fs" onchange="filterTable('tasks-tbody', this.value, [1])">
+            <option value="">Все типы</option><option>INSPECTION</option><option>REPLACEMENT</option>
+          </select>
+        </div>
+      </div>
+      <div class="card-wrap">
+        <div id="tasks-table">
+          <div style="padding:24px;font-size:.85rem;color:#64748b;">
+            <i class="bi bi-info-circle"></i>
+            Задачи загружаются по тенанту. Выберите тенант:
+            <select class="fs ms-2" id="tenant-tasks-select" onchange="loadTasksForTenant(this.value)" style="display:inline-block">
+              <option value="">— выберите —</option>
+            </select>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ ACTS ══ -->
+    <div class="tab-page" id="tab-acts">
+      <div class="sec-hdr">
+        <div class="fbar">
+          <input class="si" type="text" placeholder="Поиск по адресу…" oninput="filterTable('acts-tbody', this.value, [2])"/>
+          <select class="fs" onchange="filterTable('acts-tbody', this.value, [1])">
+            <option value="">Все типы</option><option>Осмотр</option><option>Замена</option>
+          </select>
+        </div>
+      </div>
+      <div class="card-wrap"><div id="acts-table"></div></div>
+    </div>
+
+    <!-- ══ SETTINGS ══ -->
+    <div class="tab-page" id="tab-settings">
+      <div style="max-width:500px">
+        <div class="card-wrap" style="padding:22px">
+          <div class="sec-title" style="margin-bottom:18px">Параметры платформы</div>
+          <div class="mb-3"><label class="form-label">Базовый URL API</label><input class="form-control" id="s-base-url" type="text"/></div>
+          <div class="mb-3"><label class="form-label">JWT TTL (сек.)</label><input class="form-control" type="number" value="3600"/></div>
+          <div class="mb-3"><label class="form-label">Лимит файла (МБ)</label><input class="form-control" type="number" value="20"/></div>
+          <button class="btn-p"><i class="bi bi-check2"></i> Сохранить</button>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /content -->
+</div>
+
+<!-- ══ Modal: Add Tenant ══ -->
+<div class="modal fade" id="modalTenant" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header"><h5 class="modal-title">Новый тенант</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+      <div class="modal-body">
+        <div class="row g-3">
+          <div class="col-12"><label class="form-label">Название <span style="color:red">*</span></label><input class="form-control" id="m-name" placeholder="ООО Пример"/></div>
+          <div class="col-12"><label class="form-label">Код тенанта <span style="color:red">*</span></label><input class="form-control" id="m-code" placeholder="primer-llc"/><div style="font-size:.7rem;color:#94a3b8;margin-top:3px">Латиница, цифры, дефис</div></div>
+          <div class="col-12">
+            <label class="form-label">Тарифный план</label>
+            <select class="form-select" id="m-plan"><option value="FREE">FREE</option><option value="BUSINESS">BUSINESS</option><option value="ENTERPRISE">ENTERPRISE</option></select>
+          </div>
+          <div class="col-12"><label class="form-label">Логин администратора <span style="color:red">*</span></label><input class="form-control" id="m-admin" placeholder="admin"/></div>
+          <div class="col-12"><label class="form-label">Пароль администратора <span style="color:red">*</span></label><input class="form-control" id="m-pass" type="password" placeholder="••••••"/></div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-g" data-bs-dismiss="modal">Отмена</button>
+        <button class="btn-p" onclick="createTenant()"><i class="bi bi-plus-lg"></i> Создать</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ Modal: Change Plan ══ -->
+<div class="modal fade" id="modalPlan" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered modal-sm">
+    <div class="modal-content">
+      <div class="modal-header"><h5 class="modal-title">Изменить тариф</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
+      <div class="modal-body">
+        <label class="form-label">Новый план</label>
+        <select class="form-select" id="plan-select"><option value="FREE">FREE</option><option value="BUSINESS">BUSINESS</option><option value="ENTERPRISE">ENTERPRISE</option></select>
+        <input type="hidden" id="plan-tenant-id"/>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-g" data-bs-dismiss="modal">Отмена</button>
+        <button class="btn-p" onclick="updatePlan()"><i class="bi bi-check2"></i> Применить</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+// ── Config ───────────────────────────────────────────────────────────────────
+const BASE = 'http://localhost:8080';
+let TOKEN = null;
+let TENANTS = [];
+
+const TITLES = {dashboard:'Дашборд',tenants:'Тенанты',users:'Пользователи',tasks:'Задачи',acts:'Акты',settings:'Настройки'};
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
+async function api(method, path, body, customToken) {
+  const headers = {'Content-Type':'application/json'};
+  const tok = customToken || TOKEN;
+  if (tok) headers['Authorization'] = 'Bearer ' + tok;
+  const res = await fetch(BASE + path, {method, headers, body: body ? JSON.stringify(body) : undefined});
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({message: res.statusText}));
+    throw new Error(err.message || err.error || `HTTP ${res.status}`);
+  }
+  if (res.status === 204) return null;
+  return res.json();
+}
+
+function planBadge(p) {
+  const cls = {FREE:'plan-free', BUSINESS:'plan-business', ENTERPRISE:'plan-enterprise'};
+  return `<span class="bp ${cls[p]||'plan-free'}">${p}</span>`;
+}
+function roleBadge(r) {
+  const cls = {SUPER_ADMIN:'role-superadmin', TENANT_ADMIN:'role-tenantadmin', DISPATCHER:'role-dispatcher', ELECTRICIAN:'role-electrician'};
+  const label = r.replace('_',' ');
+  return `<span class="br ${cls[r]||''}">${label}</span>`;
+}
+function statusBadge(s) {
+  const cls = {PENDING:'s-pending', IN_PROGRESS:'s-inprogress', COMPLETED:'s-completed', CANCELED:'s-canceled'};
+  return `<span class="bs ${cls[s]||''}">${s}</span>`;
+}
+function activeBadge(a) {
+  return a ? `<span class="ba active-y">Активен</span>` : `<span class="ba active-n">Неактивен</span>`;
+}
+function fmtDate(d) {
+  if (!d) return '—';
+  const dt = new Date(d);
+  return isNaN(dt) ? d : dt.toLocaleDateString('ru-RU');
+}
+function shorten(s, n=30) { return s && s.length > n ? s.slice(0,n)+'…' : (s||'—'); }
+
+// ── Auth ─────────────────────────────────────────────────────────────────────
+async function doBootstrap() {
+  const u = document.getElementById('l-user').value.trim();
+  const p = document.getElementById('l-pass').value.trim();
+  if (!u || !p) { showLoginErr('Заполните поля'); return; }
+  try {
+    await api('POST', '/api/auth/bootstrap-super-admin', {username: u, password: p});
+    showLoginErr('Bootstrap успешен! Теперь войдите.', '#10b981');
+  } catch(e) {
+    showLoginErr('Bootstrap: ' + e.message);
+  }
+}
+
+async function doLogin() {
+  const u = document.getElementById('l-user').value.trim();
+  const p = document.getElementById('l-pass').value.trim();
+  if (!u || !p) { showLoginErr('Заполните поля'); return; }
+  try {
+    const res = await api('POST', '/api/auth/login', {username: u, password: p, tenantCode: ''});
+    TOKEN = res.token;
+    document.getElementById('sb-name').textContent = res.fullName || u;
+    document.getElementById('sb-av').textContent = (res.fullName||u).slice(0,2).toUpperCase();
+    document.getElementById('login-overlay').style.display = 'none';
+    document.getElementById('sidebar').style.display = 'flex';
+    document.getElementById('main-content').style.display = 'flex';
+    document.getElementById('s-base-url').value = BASE;
+    await loadDashboard();
+  } catch(e) {
+    showLoginErr('Ошибка входа: ' + e.message);
+  }
+}
+
+function showLoginErr(msg, color='#ef4444') {
+  const el = document.getElementById('l-err');
+  const sp = document.getElementById('l-msg');
+  sp.textContent = msg;
+  el.style.color = color;
+  el.style.display = 'block';
+}
+
+function logout() {
+  TOKEN = null;
+  document.getElementById('login-overlay').style.display = 'flex';
+  document.getElementById('sidebar').style.display = 'none';
+  document.getElementById('main-content').style.display = 'none';
+}
+
+// ── Navigation ────────────────────────────────────────────────────────────────
+let currentTab = 'dashboard';
+function showTab(name, el) {
+  document.querySelectorAll('.tab-page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-it').forEach(n => n.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  if (el) el.classList.add('active');
+  document.getElementById('topbar-title').textContent = TITLES[name] || name;
+  currentTab = name;
+  if (name === 'tenants') loadTenants();
+  if (name === 'users') loadUsers();
+  if (name === 'tasks') initTasksTab();
+  if (name === 'acts') loadActs();
+}
+
+function reloadCurrentTab() { showTab(currentTab, null); }
+
+// ── Dashboard ─────────────────────────────────────────────────────────────────
+async function loadDashboard() {
+  try {
+    TENANTS = await api('GET', '/api/platform/tenants');
+  } catch(e) {
+    TENANTS = [];
+    console.warn('Cannot load tenants:', e.message);
+  }
+
+  // Stat cards
+  const total = TENANTS.length;
+  const active = TENANTS.filter(t => t.active).length;
+  const enterprise = TENANTS.filter(t => t.plan === 'ENTERPRISE').length;
+  const business   = TENANTS.filter(t => t.plan === 'BUSINESS').length;
+  const free       = TENANTS.filter(t => t.plan === 'FREE').length;
+
+  document.getElementById('stat-grid').innerHTML = `
+    <div class="stat-card">
+      <div class="sc-top"><div class="sc-label">Тенанты</div><div class="sc-icon ic-blue"><i class="bi bi-building"></i></div></div>
+      <div><div class="sc-val">${total}</div><div class="sc-sub">${active} активных · ${total-active} неактивных</div></div>
+      <div class="trend up"><i class="bi bi-arrow-up-short"></i> Live data</div>
+    </div>
+    <div class="stat-card">
+      <div class="sc-top"><div class="sc-label">Enterprise</div><div class="sc-icon ic-purple"><i class="bi bi-star-fill"></i></div></div>
+      <div><div class="sc-val">${enterprise}</div><div class="sc-sub">Без ограничений пользователей</div></div>
+      <div class="trend neutral"><i class="bi bi-dash"></i> Топ план</div>
+    </div>
+    <div class="stat-card">
+      <div class="sc-top"><div class="sc-label">Business</div><div class="sc-icon ic-orange"><i class="bi bi-briefcase"></i></div></div>
+      <div><div class="sc-val">${business}</div><div class="sc-sub">До 50 пользователей</div></div>
+      <div class="trend neutral"><i class="bi bi-dash"></i> Mid план</div>
+    </div>
+    <div class="stat-card">
+      <div class="sc-top"><div class="sc-label">Free</div><div class="sc-icon ic-green"><i class="bi bi-gift"></i></div></div>
+      <div><div class="sc-val">${free}</div><div class="sc-sub">До 5 пользователей</div></div>
+      <div class="trend neutral"><i class="bi bi-dash"></i> Базовый план</div>
+    </div>`;
+
+  // Tenants breakdown
+  const maxT = total || 1;
+  document.getElementById('ov-grid').innerHTML = `
+    <div class="card-wrap" style="padding:20px">
+      <div class="sec-hdr"><div class="sec-title">Тенанты по тарифам</div></div>
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <div>
+          <div style="display:flex;justify-content:space-between;font-size:.82rem;margin-bottom:4px"><span>ENTERPRISE</span><span style="color:#7c3aed;font-weight:700">${enterprise}</span></div>
+          <div class="progress"><div class="progress-bar" style="width:${(enterprise/maxT*100).toFixed(0)}%;background:#8b5cf6"></div></div>
+        </div>
+        <div>
+          <div style="display:flex;justify-content:space-between;font-size:.82rem;margin-bottom:4px"><span>BUSINESS</span><span style="color:#1d4ed8;font-weight:700">${business}</span></div>
+          <div class="progress"><div class="progress-bar" style="width:${(business/maxT*100).toFixed(0)}%;background:#3b82f6"></div></div>
+        </div>
+        <div>
+          <div style="display:flex;justify-content:space-between;font-size:.82rem;margin-bottom:4px"><span>FREE</span><span style="color:#64748b;font-weight:700">${free}</span></div>
+          <div class="progress"><div class="progress-bar" style="width:${(free/maxT*100).toFixed(0)}%;background:#94a3b8"></div></div>
+        </div>
+      </div>
+    </div>
+    <div class="card-wrap" style="padding:20px">
+      <div class="sec-hdr"><div class="sec-title">Активность</div></div>
+      <div style="display:flex;flex-direction:column;gap:10px;font-size:.85rem">
+        <div style="display:flex;justify-content:space-between"><span>Активных тенантов</span><b>${active} / ${total}</b></div>
+        <div style="display:flex;justify-content:space-between"><span>Процент активных</span><b style="color:#10b981">${total ? (active/total*100).toFixed(0) : 0}%</b></div>
+        <hr style="margin:4px 0;border-color:#f1f5f9">
+        <div style="font-size:.78rem;color:#94a3b8">Данные загружены с бэкенда в реальном времени</div>
+      </div>
+    </div>`;
+
+  // Recent tenants table
+  const rows = TENANTS.slice(-5).reverse().map(t => `
+    <tr>
+      <td><div style="font-weight:600">${t.name}</div><div class="tm">${t.code}</div></td>
+      <td>${planBadge(t.plan)}</td>
+      <td>${t.userLimit > 0 ? '— / '+t.userLimit : '— / ∞'}</td>
+      <td>${fmtDate(t.createdAt)}</td>
+      <td>${activeBadge(t.active)}</td>
+    </tr>`).join('');
+
+  document.getElementById('dash-tenants-table').innerHTML = `
+    <table class="table">
+      <thead><tr><th>Компания</th><th>Тариф</th><th>Пользователи</th><th>Дата рег.</th><th>Статус</th></tr></thead>
+      <tbody>${rows || '<tr><td colspan="5" style="text-align:center;padding:32px;color:#94a3b8">Нет данных</td></tr>'}</tbody>
+    </table>`;
+}
+
+// ── Tenants ───────────────────────────────────────────────────────────────────
+async function loadTenants() {
+  document.getElementById('tenants-table').innerHTML = '<div class="loading"><i class="bi bi-arrow-repeat"></i>Загрузка…</div>';
+  try {
+    TENANTS = await api('GET', '/api/platform/tenants');
+  } catch(e) {
+    document.getElementById('tenants-table').innerHTML = `<div style="padding:32px;color:#ef4444;text-align:center"><i class="bi bi-exclamation-circle"></i> ${e.message}</div>`;
+    return;
+  }
+  const rows = TENANTS.map((t,i) => `
+    <tr>
+      <td style="color:#94a3b8">#${t.id}</td>
+      <td><div style="font-weight:600">${t.name}</div><div class="tm">${t.code}</div></td>
+      <td>${planBadge(t.plan)}</td>
+      <td>${t.userLimit > 0 ? '— / '+t.userLimit : '— / ∞'}</td>
+      <td>${activeBadge(t.active)}</td>
+      <td>${fmtDate(t.createdAt)}</td>
+      <td>
+        <div style="display:flex;gap:5px">
+          <button class="act-btn" onclick="openPlanModal(${t.id}, '${t.plan}')" title="Изменить тариф"><i class="bi bi-pencil"></i></button>
+          <button class="act-btn danger" onclick="deactivateTenant(${t.id})" title="Деактивировать"><i class="bi bi-slash-circle"></i></button>
+        </div>
+      </td>
+    </tr>`).join('');
+
+  document.getElementById('tenants-table').innerHTML = `
+    <table class="table">
+      <thead><tr><th>ID</th><th>Компания</th><th>Тариф</th><th>Пользователи</th><th>Статус</th><th>Создан</th><th></th></tr></thead>
+      <tbody id="tenants-tbody">${rows || '<tr><td colspan="7" style="text-align:center;padding:32px;color:#94a3b8">Нет тенантов</td></tr>'}</tbody>
+    </table>`;
+
+  // Populate tenant filter for users
+  const sel = document.getElementById('tenant-filter-users');
+  sel.innerHTML = '<option value="">Все тенанты</option>' + TENANTS.map(t => `<option value="${t.code}">${t.code}</option>`).join('');
+}
+
+// ── Users ─────────────────────────────────────────────────────────────────────
+async function loadUsers() {
+  document.getElementById('users-table').innerHTML = '<div class="loading"><i class="bi bi-arrow-repeat"></i>Загрузка…</div>';
+  if (!TENANTS.length) {
+    try { TENANTS = await api('GET', '/api/platform/tenants'); } catch(e) {}
+  }
+
+  // Для каждого тенанта загружаем юзеров через логин как tenant admin
+  // Упрощённо: просто показываем тенанты и приглашаем выбрать
+  const rows = TENANTS.map(t => `
+    <tr>
+      <td><div style="font-weight:600">${t.name}</div><div class="tm">${t.code}</div></td>
+      <td>${planBadge(t.plan)}</td>
+      <td>${activeBadge(t.active)}</td>
+      <td><button class="act-btn" onclick="alert('Для просмотра пользователей тенанта войдите как ${t.code} admin')" title="Просмотр"><i class="bi bi-eye"></i></button></td>
+    </tr>`).join('');
+
+  document.getElementById('users-table').innerHTML = `
+    <div style="padding:14px 16px;font-size:.82rem;color:#3b82f6;background:#eff6ff;border-bottom:1px solid #e2e8f0">
+      <i class="bi bi-info-circle"></i> Пользователи доступны через API тенанта (TENANT_ADMIN токен). Ниже — список тенантов платформы.
+    </div>
+    <table class="table">
+      <thead><tr><th>Тенант</th><th>Тариф</th><th>Статус</th><th></th></tr></thead>
+      <tbody id="users-tbody">${rows}</tbody>
+    </table>`;
+}
+
+// ── Tasks ─────────────────────────────────────────────────────────────────────
+function initTasksTab() {
+  if (!TENANTS.length) return;
+  const sel = document.getElementById('tenant-tasks-select');
+  sel.innerHTML = '<option value="">— выберите —</option>' + TENANTS.map(t => `<option value="${t.code}|${t.id}">${t.name} (${t.code})</option>`).join('');
+}
+
+async function loadTasksForTenant(val) {
+  if (!val) return;
+  const [code] = val.split('|');
+  document.getElementById('tasks-table').innerHTML = '<div class="loading"><i class="bi bi-arrow-repeat"></i>Загрузка задач…</div>';
+
+  // Для загрузки задач нужен токен электрика/диспетчера этого тенанта
+  // Попробуем залогиниться как electrician (по умолчанию kozlov_d для esc-ural)
+  // Если нет — показываем сообщение
+  const demoUsers = {
+    'esc-ural':     {username:'kozlov_d',  tenantCode:'esc-ural'},
+    'gazmontazh':   {username:'novikov_s', tenantCode:'gazmontazh'},
+    'stroykontrol': {username:'titov_k',   tenantCode:'stroykontrol'},
+    'megawatt':     {username:'gorbunov_n',tenantCode:'megawatt'},
+    'north-grid':   {username:'northadmin',tenantCode:'north-grid'},
+    'zhkh-partner': {username:'zhkh_admin',tenantCode:'zhkh-partner'},
+  };
+
+  const demo = demoUsers[code];
+  if (!demo) {
+    showTasksNote(code);
+    return;
+  }
+
+  let tenantToken;
+  try {
+    const r = await api('POST', '/api/auth/login', {
+      username: demo.username, password: '', tenantCode: demo.tenantCode
+    });
+    tenantToken = r.token;
+  } catch(e) {
+    showTasksNote(code, `Не удалось войти как ${demo.username}: ${e.message}`);
+    return;
+  }
+
+  let tasks;
+  try {
+    tasks = await api('GET', '/api/tasks', null, tenantToken);
+  } catch(e) {
+    showTasksNote(code, e.message);
+    return;
+  }
+
+  const rows = tasks.map(t => `
+    <tr>
+      <td style="color:#94a3b8">#${t.id}</td>
+      <td><span style="background:${t.type==='INSPECTION'?'#eff6ff':'#fdf2f8'};color:${t.type==='INSPECTION'?'#1d4ed8':'#86198f'};padding:3px 8px;border-radius:20px;font-size:.7rem;font-weight:600">${t.type}</span></td>
+      <td>${shorten(t.address, 35)}</td>
+      <td>${t.consumerName||'—'}</td>
+      <td>${statusBadge(t.status)}</td>
+      <td>${fmtDate(t.dueDate)}</td>
+    </tr>`).join('');
+
+  document.getElementById('tasks-table').innerHTML = `
+    <div style="padding:14px 16px;font-size:.82rem;color:#166534;background:#f0fdf4;border-bottom:1px solid #e2e8f0">
+      <i class="bi bi-check-circle"></i> Загружено ${tasks.length} задач тенанта <b>${code}</b>
+    </div>
+    <table class="table">
+      <thead><tr><th>ID</th><th>Тип</th><th>Адрес</th><th>Потребитель</th><th>Статус</th><th>Срок</th></tr></thead>
+      <tbody id="tasks-tbody">${rows || '<tr><td colspan="6" style="text-align:center;padding:32px;color:#94a3b8">Нет задач</td></tr>'}</tbody>
+    </table>`;
+}
+
+function showTasksNote(code, msg) {
+  document.getElementById('tasks-table').innerHTML = `
+    <div style="padding:32px;text-align:center;color:#94a3b8">
+      <i class="bi bi-lock" style="font-size:2rem;display:block;margin-bottom:12px"></i>
+      <p>Задачи тенанта <b>${code}</b> требуют авторизации как пользователь тенанта.</p>
+      ${msg ? `<p style="color:#ef4444;font-size:.82rem">${msg}</p>` : ''}
+      <p style="font-size:.8rem">Пользователи из rich_seed.sql: kozlov_d, novikov_s, titov_k, gorbunov_n</p>
+    </div>`;
+}
+
+// ── Acts ──────────────────────────────────────────────────────────────────────
+async function loadActs() {
+  document.getElementById('acts-table').innerHTML = '<div class="loading"><i class="bi bi-arrow-repeat"></i>Загрузка…</div>';
+  document.getElementById('acts-table').innerHTML = `
+    <div style="padding:32px;text-align:center;color:#94a3b8">
+      <i class="bi bi-file-earmark-text" style="font-size:2rem;display:block;margin-bottom:12px"></i>
+      <p>Акты доступны через API тенанта. Перейдите на вкладку <b>Задачи</b>, выберите тенант — акты создаются оттуда.</p>
+    </div>`;
+}
+
+// ── Tenant actions ────────────────────────────────────────────────────────────
+function openPlanModal(id, plan) {
+  document.getElementById('plan-tenant-id').value = id;
+  document.getElementById('plan-select').value = plan;
+  new bootstrap.Modal(document.getElementById('modalPlan')).show();
+}
+
+async function updatePlan() {
+  const id = document.getElementById('plan-tenant-id').value;
+  const plan = document.getElementById('plan-select').value;
+  try {
+    await api('PATCH', `/api/platform/tenants/${id}/plan`, {plan});
+    bootstrap.Modal.getInstance(document.getElementById('modalPlan')).hide();
+    loadTenants();
+  } catch(e) {
+    alert('Ошибка: ' + e.message);
+  }
+}
+
+async function deactivateTenant(id) {
+  if (!confirm('Деактивировать тенант?')) return;
+  try {
+    await api('DELETE', `/api/platform/tenants/${id}`);
+    loadTenants();
+  } catch(e) {
+    alert('Ошибка: ' + e.message);
+  }
+}
+
+async function createTenant() {
+  const name  = document.getElementById('m-name').value.trim();
+  const code  = document.getElementById('m-code').value.trim();
+  const plan  = document.getElementById('m-plan').value;
+  const admin = document.getElementById('m-admin').value.trim();
+  const pass  = document.getElementById('m-pass').value.trim();
+  if (!name || !code || !admin || !pass) { alert('Заполните все поля'); return; }
+  try {
+    await api('POST', '/api/auth/register-company', {name, code: code, plan, username: admin, password: pass});
+    bootstrap.Modal.getInstance(document.getElementById('modalTenant')).hide();
+    loadTenants();
+  } catch(e) {
+    alert('Ошибка: ' + e.message);
+  }
+}
+
+// ── Filter ────────────────────────────────────────────────────────────────────
+function filterTable(tbodyId, q, cols) {
+  const tbody = document.getElementById(tbodyId);
+  if (!tbody) return;
+  const lq = q.toLowerCase();
+  Array.from(tbody.rows).forEach(row => {
+    const text = cols.map(c => row.cells[c]?.textContent || '').join(' ').toLowerCase();
+    row.style.display = (!lq || text.includes(lq)) ? '' : 'none';
+  });
+}
+</script>
+</body>
+</html>
