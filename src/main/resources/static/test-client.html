@@ -3,221 +3,425 @@
 
 <head>
     <meta charset="UTF-8">
-    <title>ElectroService Test Client</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CSM API Test Client</title>
     <style>
         body {
-            font-family: Arial, sans-serif;
-            margin: 32px;
-            background: #f4f6fb;
-        }
-        
-        h1 {
-            color: #1d3557;
-        }
-        
-        section {
-            background: #fff;
-            border-radius: 12px;
+            font-family: Inter, Arial, sans-serif;
+            margin: 0;
             padding: 20px;
-            margin-bottom: 24px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            min-height: 100vh;
+            background: #eef2ff;
+            color: #1f2937;
         }
-        
+
+        .container {
+            max-width: 1100px;
+            margin: 0 auto;
+        }
+
+        h1,
+        h2 {
+            margin-top: 0;
+        }
+
+        .section {
+            background: #ffffff;
+            border: 1px solid #dbeafe;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(15, 23, 42, 0.08);
+            padding: 24px;
+            margin-bottom: 24px;
+        }
+
+        .grid {
+            display: grid;
+            gap: 16px;
+        }
+
+        .grid-3 {
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+
         label {
             display: block;
-            margin-bottom: 4px;
-            font-weight: bold;
+            margin-bottom: 6px;
+            font-weight: 600;
         }
-        
+
         input,
         select,
         textarea {
             width: 100%;
-            padding: 8px;
-            border-radius: 6px;
-            border: 1px solid #cfd8ea;
-            margin-bottom: 12px;
+            border: 1px solid #cbd5e1;
+            border-radius: 12px;
+            padding: 12px;
+            font-size: 14px;
+            color: #111827;
+            background: #f8fafc;
         }
-        
+
+        textarea {
+            min-height: 140px;
+            resize: vertical;
+            font-family: Menlo, Monaco, monospace;
+        }
+
         button {
-            background: #1d70f2;
-            color: #fff;
             border: none;
-            padding: 10px 20px;
-            border-radius: 6px;
+            border-radius: 12px;
+            background: #2563eb;
+            color: white;
+            padding: 12px 18px;
             cursor: pointer;
+            font-weight: 700;
         }
-        
-        button:disabled {
-            background: #9fb8e7;
-            cursor: not-allowed;
+
+        button.secondary {
+            background: #ea580c;
         }
-        
-        .row {
+
+        button.small {
+            padding: 10px 14px;
+        }
+
+        .inline-row {
             display: flex;
             gap: 16px;
+            flex-wrap: wrap;
         }
-        
-        .row>div {
-            flex: 1;
+
+        .token-box,
+        .log-box,
+        .profile-box {
+            background: #1e293b;
+            color: #e2e8f0;
+            border-radius: 16px;
+            padding: 16px;
+            font-family: Menlo, Monaco, monospace;
+            white-space: pre-wrap;
+            word-break: break-word;
+            min-height: 80px;
         }
-        
-        pre {
-            background: #0f172a;
-            color: #f1f5f9;
-            padding: 12px;
-            border-radius: 8px;
-            overflow-x: auto;
+
+        .note {
+            color: #475569;
+            margin: 0 0 12px;
         }
-        
-        .token {
-            font-size: 12px;
-            word-break: break-all;
-            background: #e1e8ff;
-            padding: 6px;
-            border-radius: 6px;
+
+        .row {
+            display: grid;
+            gap: 16px;
+        }
+
+        @media (min-width: 900px) {
+            .grid-3 {
+                grid-template-columns: repeat(3, minmax(0, 1fr));
+            }
         }
     </style>
 </head>
 
 <body>
-    <h1>Тестовый клиент</h1>
+    <div class="container">
+        <h1>Тестовый API фронтенд</h1>
+        <p class="note">Открыть доступно по <code>/test-client.html</code>. Используй этот интерфейс для тестирования логина, регистрации, задач, актов и админских эндпоинтов.</p>
 
-    <section id="auth">
-        <h2>1. Авторизация</h2>
-        <div class="row">
-            <div>
-                <label>Логин</label>
-                <input id="login-username" value="electrician1">
+        <section class="section">
+            <h2>1. Авторизация</h2>
+            <div class="grid grid-3">
+                <div>
+                    <label>Tenant code</label>
+                    <input id="tenantCode" placeholder="demo-energy">
+                </div>
+                <div>
+                    <label>Username</label>
+                    <input id="loginUsername" value="tenantadmin">
+                </div>
+                <div>
+                    <label>Password</label>
+                    <input id="loginPassword" type="password" value="tenant123">
+                </div>
             </div>
-            <div>
-                <label>Пароль</label>
-                <input id="login-password" type="password" value="pass123">
+            <div class="inline-row" style="margin-top:16px;">
+                <button onclick="login()">Войти</button>
+                <button class="secondary" onclick="bootstrapSuperAdmin()">Bootstrap SUPER_ADMIN</button>
             </div>
-        </div>
-        <button onclick="register()">Регистрация</button>
-        <button onclick="login()">Войти</button>
-        <p>Токен: <span id="token" class="token">пока пусто</span></p>
-    </section>
+            <div style="margin-top:16px;">
+                <div class="profile-box" id="profileBox">Профиль пользователя появится здесь.</div>
+                <div class="token-box" id="tokenBox">JWT токен появится здесь.</div>
+            </div>
+        </section>
 
-    <section>
-        <h2>2. Задачи</h2>
-        <button onclick="loadTasks()">GET /api/tasks</button>
-        <div class="row">
-            <div>
-                <label>ID задачи</label>
-                <input id="task-id">
+        <section class="section">
+            <h2>2. Регистрация компании</h2>
+            <p class="note">Создаёт нового тенанта и администратора в нём через <code>/api/auth/register-company</code>.</p>
+            <div class="grid grid-3">
+                <div>
+                    <label>Tenant name</label>
+                    <input id="tenantName" value="Demo Energy">
+                </div>
+                <div>
+                    <label>Tenant code</label>
+                    <input id="tenantCodeRegister" value="demo-energy">
+                </div>
+                <div>
+                    <label>Plan</label>
+                    <select id="tenantPlan">
+                        <option>FREE</option>
+                        <option>BUSINESS</option>
+                        <option>ENTERPRISE</option>
+                    </select>
+                </div>
             </div>
-            <div>
-                <label>Новый статус</label>
-                <select id="task-status">
-                <option value="IN_PROGRESS">IN_PROGRESS</option>
-                <option value="COMPLETED">COMPLETED</option>
-            </select>
+            <div class="grid grid-3">
+                <div>
+                    <label>Admin username</label>
+                    <input id="registerUsername" value="tenantadmin">
+                </div>
+                <div>
+                    <label>Admin password</label>
+                    <input id="registerPassword" type="password" value="tenant123">
+                </div>
+                <div>
+                    <label>Admin full name</label>
+                    <input id="registerFullname" value="Tenant Admin">
+                </div>
             </div>
-        </div>
-        <button onclick="updateTask()">PUT /api/tasks/{id}/status</button>
-    </section>
+            <button style="margin-top:16px;" onclick="registerCompany()">POST /api/auth/register-company</button>
+        </section>
 
-    <section>
-        <h2>3. Создать акт осмотра</h2>
-        <label>JSON тела</label>
-        <textarea id="inspection-json" rows="8">
-{
+        <section class="section">
+            <h2>3. Платформенный админ</h2>
+            <p class="note">Только для роли <code>SUPER_ADMIN</code>.</p>
+            <div class="inline-row">
+                <button onclick="listTenants()">GET /api/platform/tenants</button>
+                <button onclick="createTenant()">POST /api/platform/tenants</button>
+            </div>
+        </section>
+
+        <section class="section">
+            <h2>4. Tenant Admin</h2>
+            <p class="note">Только для роли <code>TENANT_ADMIN</code>.</p>
+            <div class="grid grid-3">
+                <div>
+                    <label>Username</label>
+                    <input id="tenantUserName" value="electrician2">
+                </div>
+                <div>
+                    <label>Password</label>
+                    <input id="tenantUserPassword" type="password" value="electric123">
+                </div>
+                <div>
+                    <label>Full name</label>
+                    <input id="tenantUserFullName" value="Electrician 2">
+                </div>
+            </div>
+            <div>
+                <label>Role</label>
+                <select id="tenantUserRole">
+                    <option>TENANT_ADMIN</option>
+                    <option>DISPATCHER</option>
+                    <option selected>ELECTRICIAN</option>
+                </select>
+            </div>
+            <div class="inline-row" style="margin-top:16px;">
+                <button onclick="listTenantUsers()">GET /api/tenant/users</button>
+                <button class="secondary" onclick="createTenantUser()">POST /api/tenant/users</button>
+            </div>
+        </section>
+
+        <section class="section">
+            <h2>5. Tasks</h2>
+            <div class="inline-row">
+                <button onclick="loadTasks()">GET /api/tasks</button>
+            </div>
+            <div class="grid grid-3" style="margin-top:16px;">
+                <div>
+                    <label>Task ID</label>
+                    <input id="taskId" placeholder="1">
+                </div>
+                <div>
+                    <label>Status</label>
+                    <select id="taskStatus">
+                        <option>PENDING</option>
+                        <option>IN_PROGRESS</option>
+                        <option>COMPLETED</option>
+                        <option>CANCELED</option>
+                    </select>
+                </div>
+                <div style="align-self:flex-end;">
+                    <button onclick="updateTask()">PUT /api/tasks/{id}/status</button>
+                </div>
+            </div>
+        </section>
+
+        <section class="section">
+            <h2>6. Inspection acts</h2>
+            <p class="note">Минимальный JSON для запроса в <code>/api/acts/inspection</code>.</p>
+            <textarea id="inspectionJson">{
   "taskId": 1,
   "addressId": 1,
   "consumerId": 1,
-  "inspectionDate": "2025-01-01",
+  "inspectionDate": "2026-03-10",
   "inspectionType": "SCHEDULED",
-  "notes": "Все нормально",
+  "notes": "Демо осмотр",
   "meters": [
     {
       "type": "SINGLE_PHASE",
-      "serialNumber": "ABC-123",
-      "manufactureYear": 2020,
-      "verificationDate": "2024-10-01",
-      "sealState": "Исправна",
-      "transformationRatio": null
+      "serialNumber": "DEMO-100",
+      "manufactureYear": 2024,
+      "verificationDate": "2025-10-01",
+      "sealState": "sealed",
+      "transformationRatio": 1
     }
   ]
-}
-    </textarea>
-        <button onclick="createInspection()">POST /api/acts/inspection</button>
-    </section>
+}</textarea>
+            <div class="inline-row" style="margin-top:16px;">
+                <button onclick="createInspection()">POST /api/acts/inspection</button>
+                <button class="secondary" onclick="loadInspectionActs()">GET /api/acts/inspection</button>
+            </div>
+        </section>
 
-    <section>
-        <h2>4. Получить мои акты</h2>
-        <button onclick="loadInspectionActs()">GET /api/acts/inspection</button>
-        <button onclick="loadReplacementActs()">GET /api/acts/replacement</button>
-    </section>
+        <section class="section">
+            <h2>7. Replacement acts</h2>
+            <p class="note">Минимальный JSON для запроса в <code>/api/acts/replacement</code>.</p>
+            <textarea id="replacementJson">{
+  "taskId": 1,
+  "addressId": 1,
+  "accountNumber": "ACC-123",
+  "installationDate": "2026-03-10",
+  "oldMeter": {
+    "type": "SINGLE_PHASE",
+    "serialNumber": "OLD-100",
+    "manufactureYear": 2018,
+    "verificationDate": "2024-08-01",
+    "sealState": "ok",
+    "transformationRatio": 1
+  },
+  "newMeter": {
+    "type": "SINGLE_PHASE",
+    "serialNumber": "NEW-200",
+    "manufactureYear": 2025,
+    "verificationDate": "2026-05-01",
+    "sealState": "ok",
+    "transformationRatio": 1
+  }
+}</textarea>
+            <div class="inline-row" style="margin-top:16px;">
+                <button onclick="createReplacement()">POST /api/acts/replacement</button>
+                <button class="secondary" onclick="loadReplacementActs()">GET /api/acts/replacement</button>
+            </div>
+        </section>
 
-    <section>
-        <h2>Логи ответов</h2>
-        <pre id="log">...</pre>
-    </section>
+        <section class="section">
+            <h2>8. Статистика</h2>
+            <button onclick="loadStats()">GET /api/stats/overview</button>
+        </section>
+
+        <section class="section">
+            <h2>Лог ответов</h2>
+            <pre class="log-box" id="logBox">Запросы и ответы появятся здесь.</pre>
+        </section>
+    </div>
 
     <script>
-        const baseUrl = '';
         let jwt = null;
 
-        function log(data) {
-            const logEl = document.getElementById('log');
-            logEl.textContent = JSON.stringify(data, null, 2);
+        function setLog(payload) {
+            document.getElementById('logBox').textContent = typeof payload === 'string' ? payload : JSON.stringify(payload, null, 2);
+        }
+
+        function setToken(token) {
+            jwt = token;
+            document.getElementById('tokenBox').textContent = token || 'пока пусто';
+        }
+
+        function setProfile(data) {
+            document.getElementById('profileBox').textContent = JSON.stringify(data, null, 2);
         }
 
         async function api(path, options = {}) {
             const headers = options.headers || {};
-            headers['Content-Type'] = 'application/json';
-            if (jwt) headers['Authorization'] = `Bearer ${jwt}`;
-            const response = await fetch(baseUrl + path, {...options,
-                headers
-            });
-            const text = await response.text();
-            try {
-                const json = text ? JSON.parse(text) : {};
-                log({
-                    path,
-                    status: response.status,
-                    body: json
-                });
-                if (!response.ok) throw json;
-                return json;
-            } catch (e) {
-                log({
-                    path,
-                    status: response.status,
-                    body: text
-                });
-                throw e;
+            if (!(options.body instanceof FormData)) {
+                headers['Content-Type'] = 'application/json';
             }
-        }
-
-        async function register() {
-            const username = document.getElementById('login-username').value;
-            const password = document.getElementById('login-password').value;
-            await api('/api/auth/register', {
-                method: 'POST',
-                body: JSON.stringify({
-                    username,
-                    password,
-                    fullName: 'Тестовый Электрик',
-                    role: 'ELECTRICIAN'
-                })
-            });
+            if (jwt) {
+                headers['Authorization'] = `Bearer ${jwt}`;
+            }
+            const response = await fetch(path, { ...options, headers });
+            const text = await response.text();
+            let body;
+            try {
+                body = text ? JSON.parse(text) : null;
+            } catch (err) {
+                body = text;
+            }
+            setLog({ path, status: response.status, body });
+            if (!response.ok) {
+                throw body;
+            }
+            return body;
         }
 
         async function login() {
-            const username = document.getElementById('login-username').value;
-            const password = document.getElementById('login-password').value;
-            const data = await api('/api/auth/login', {
-                method: 'POST',
-                body: JSON.stringify({
-                    username,
-                    password
-                })
-            });
-            jwt = data.token;
-            document.getElementById('token').textContent = jwt;
+            const tenantCode = document.getElementById('tenantCode').value.trim();
+            const username = document.getElementById('loginUsername').value.trim();
+            const password = document.getElementById('loginPassword').value;
+            const payload = { username, password };
+            if (tenantCode) payload.tenantCode = tenantCode;
+            const data = await api('/api/auth/login', { method: 'POST', body: JSON.stringify(payload) });
+            setToken(data.token);
+            setProfile({ role: data.role, tenantCode: data.tenantCode, tenantId: data.tenantId, fullName: data.fullName });
+        }
+
+        async function bootstrapSuperAdmin() {
+            const username = document.getElementById('loginUsername').value.trim();
+            const password = document.getElementById('loginPassword').value;
+            const fullName = document.getElementById('registerFullname').value.trim() || 'Super Admin';
+            const data = await api('/api/auth/bootstrap-super-admin', { method: 'POST', body: JSON.stringify({ username, password, fullName }) });
+            setToken(data.token);
+            setProfile(data);
+        }
+
+        async function registerCompany() {
+            const payload = {
+                tenantName: document.getElementById('tenantName').value.trim(),
+                tenantCode: document.getElementById('tenantCodeRegister').value.trim(),
+                plan: document.getElementById('tenantPlan').value,
+                username: document.getElementById('registerUsername').value.trim(),
+                password: document.getElementById('registerPassword').value,
+                fullName: document.getElementById('registerFullname').value.trim()
+            };
+            await api('/api/auth/register-company', { method: 'POST', body: JSON.stringify(payload) });
+            setLog('Компания зарегистрирована. Выполните вход с tenantCode и новым пользователем.');
+        }
+
+        async function listTenants() {
+            await api('/api/platform/tenants');
+        }
+
+        async function createTenant() {
+            const payload = {
+                name: document.getElementById('tenantName').value.trim(),
+                code: document.getElementById('tenantCodeRegister').value.trim(),
+                plan: document.getElementById('tenantPlan').value
+            };
+            await api('/api/platform/tenants', { method: 'POST', body: JSON.stringify(payload) });
+        }
+
+        async function listTenantUsers() {
+            await api('/api/tenant/users');
+        }
+
+        async function createTenantUser() {
+            const payload = {
+                username: document.getElementById('tenantUserName').value.trim(),
+                password: document.getElementById('tenantUserPassword').value,
+                fullName: document.getElementById('tenantUserFullName').value.trim(),
+                role: document.getElementById('tenantUserRole').value
+            };
+            await api('/api/tenant/users', { method: 'POST', body: JSON.stringify(payload) });
         }
 
         async function loadTasks() {
@@ -225,31 +429,35 @@
         }
 
         async function updateTask() {
-            const taskId = document.getElementById('task-id').value;
-            const status = document.getElementById('task-status').value;
-            if (!taskId) return alert('Введи ID задачи');
-            await api(`/api/tasks/${taskId}/status`, {
-                method: 'PUT',
-                body: JSON.stringify({
-                    status
-                })
-            });
+            const taskId = document.getElementById('taskId').value.trim();
+            if (!taskId) {
+                alert('Введите ID задачи');
+                return;
+            }
+            const payload = { status: document.getElementById('taskStatus').value };
+            await api(`/api/tasks/${taskId}/status`, { method: 'PUT', body: JSON.stringify(payload) });
         }
 
         async function createInspection() {
-            const body = document.getElementById('inspection-json').value;
-            await api('/api/acts/inspection', {
-                method: 'POST',
-                body
-            });
+            const body = document.getElementById('inspectionJson').value;
+            await api('/api/acts/inspection', { method: 'POST', body });
         }
 
         async function loadInspectionActs() {
             await api('/api/acts/inspection');
         }
 
+        async function createReplacement() {
+            const body = document.getElementById('replacementJson').value;
+            await api('/api/acts/replacement', { method: 'POST', body });
+        }
+
         async function loadReplacementActs() {
             await api('/api/acts/replacement');
+        }
+
+        async function loadStats() {
+            await api('/api/stats/overview');
         }
     </script>
 </body>
