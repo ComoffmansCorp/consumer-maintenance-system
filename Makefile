@@ -1,25 +1,52 @@
-SHELL := /bin/zsh
+SHELL := /bin/bash
 
-.PHONY: help build run docker-build docker-up docker-down docker-fresh clean test
+APP_NAME := consumer-maintenance-system
+DATABASE_URL ?= postgres://postgres:postgres@localhost:5432/curs3?sslmode=disable
+
+.PHONY: help run build seed test lint generate migrate-up migrate-down \
+	docker-build docker-up docker-down docker-fresh clean
 
 help:
 	@echo "Available targets:"
-	@echo "  make build        Build the project with Maven."
-	@echo "  make run          Run the application locally."
-	@echo "  make docker-build Build the Docker image."
-	@echo "  make docker-up    Start app and PostgreSQL via Docker Compose."
-	@echo "  make docker-down  Stop Docker Compose services."
-	@echo "  make clean        Clean Maven build artifacts."
-	@echo "  make test         Run unit tests."
+	@echo "  make run           Run the API server locally (needs local Postgres + env vars)"
+	@echo "  make seed          Fill the local database with demo data (idempotent)"
+	@echo "  make build         Build the Go binary into bin/api"
+	@echo "  make test          Run Go tests"
+	@echo "  make lint          Run golangci-lint"
+	@echo "  make generate      Regenerate sqlc code from sql/ and migrations/"
+	@echo "  make migrate-up    Apply all pending migrations"
+	@echo "  make migrate-down  Roll back the last migration"
+	@echo "  make docker-up     Start the whole stack (db+migrate+seed+api+frontend) via Docker Compose"
+	@echo "  make docker-down   Stop Docker Compose services"
+	@echo "  make docker-fresh  Recreate Docker Compose services with a clean volume"
+	@echo "  make clean         Remove build artifacts"
+
+run:
+	go run ./cmd/api
+
+seed:
+	go run ./cmd/seed
 
 build:
-	./mvnw clean package
+	go build -o bin/api ./cmd/api
 
-run: build
-	DB_URL=jdbc:postgresql://localhost:5432/curs3 JWT_SECRET=5enjbH5/KpbWF7r4fZ6/ChiRbEjXfnOBr85Xxq9mBRo= java -jar target/curs3ProjectBack-0.0.1-SNAPSHOT.jar
+test:
+	go test ./...
+
+lint:
+	golangci-lint run ./...
+
+generate:
+	sqlc generate
+
+migrate-up:
+	migrate -database "$(DATABASE_URL)" -path migrations up
+
+migrate-down:
+	migrate -database "$(DATABASE_URL)" -path migrations down 1
 
 docker-build:
-	docker build -t curs3projectback .
+	docker build -t $(APP_NAME) .
 
 docker-up:
 	docker compose up --build
@@ -32,7 +59,4 @@ docker-fresh:
 	docker compose up --build
 
 clean:
-	./mvnw clean
-
-test:
-	./mvnw test
+	rm -rf bin

@@ -1,0 +1,9 @@
+DROP TABLE IF EXISTS photos;
+DROP TABLE IF EXISTS meters;
+DROP TABLE IF EXISTS replacement_acts;
+DROP TABLE IF EXISTS inspection_acts;
+DROP TABLE IF EXISTS tasks;
+DROP TABLE IF EXISTS addresses;
+DROP TABLE IF EXISTS organizations;
+DROP TABLE IF EXISTS users;
+DROP TABLE IF EXISTS tenants;

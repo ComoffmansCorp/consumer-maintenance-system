@@ -1,0 +1,134 @@
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+@import 'tailwindcss';
+
+/* Опломбировано (Field Ledger) — design system for Consumer Maintenance System.
+   Grounded in the physical world of utility metering: brushed-steel meter
+   housings, a stamped brass seal tag, and the mechanical digit-wheel register
+   used for readings. Dark mode is opt-in via a `.dark` class on <html>,
+   toggled from the app shell and persisted to localStorage. */
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --font-display: 'Space Grotesk', ui-sans-serif, system-ui, sans-serif;
+  --font-sans: 'IBM Plex Sans', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
+
+  /* Steel housing neutrals */
+  --color-ink: #14181c;
+  --color-graphite: #1f262b;
+  --color-slate: #4d5b66;
+  --color-mist: #93a1ab;
+  --color-line: #dde3e6;
+  --color-surface: #f4f6f6;
+
+  /* Brass seal accent */
+  --color-primary: #b8863a;
+  --color-primary-hover: #9c6f2c;
+  --color-primary-soft: #f4e8d0;
+
+  /* Status = metallurgy of the order's lifecycle: awaiting (raw steel),
+     assigned (instrument blue), in progress (working copper), completed
+     (verdigris patina — settled), canceled (rust). */
+  --color-status-created: #5c6b74;
+  --color-status-assigned: #35608f;
+  --color-status-in-progress: #b0602a;
+  --color-status-completed: #3f7a63;
+  --color-status-canceled: #a23b32;
+
+  --radius-md: 6px;
+}
+
+@layer base {
+  html {
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  body {
+    @apply bg-surface text-ink dark:bg-ink dark:text-surface;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-family: var(--font-display);
+  }
+
+  ::selection {
+    background: var(--color-primary-soft);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+@layer components {
+  .data-mono {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .card {
+    @apply rounded-md border border-line bg-white dark:border-graphite dark:bg-graphite;
+  }
+
+  .hairline {
+    @apply border border-line dark:border-graphite;
+  }
+
+  /* Ledger paper: a faint ruled backdrop for the auth screens — the one
+     place the system opens with a bit of atmosphere before getting to work. */
+  .auth-shell {
+    background-image: linear-gradient(var(--color-line) 1px, transparent 1px);
+    background-size: 100% 28px;
+  }
+  .dark .auth-shell {
+    background-image: linear-gradient(var(--color-graphite) 1px, transparent 1px);
+  }
+
+  /* Odometer: mechanical digit-wheel register, one cell per digit, tabular
+     numerals with a seam line through the middle like a meter counter. */
+  .odometer {
+    @apply inline-flex overflow-hidden rounded border border-line dark:border-graphite;
+    font-family: var(--font-mono);
+  }
+  .odometer-digit {
+    @apply relative flex items-center justify-center bg-white text-ink dark:bg-ink dark:text-surface;
+    font-variant-numeric: tabular-nums;
+    border-right: 1px solid var(--color-line);
+  }
+  .dark .odometer-digit {
+    border-right-color: var(--color-graphite);
+  }
+  .odometer-digit:last-child {
+    border-right: none;
+  }
+  .odometer-digit::after {
+    content: '';
+    position: absolute;
+    inset: 0 0 auto 0;
+    top: 50%;
+    height: 1px;
+    background: color-mix(in srgb, currentColor 12%, transparent);
+  }
+
+  /* Seal tag: equipment-plate status indicator — a colored edge strip
+     instead of a generic SaaS pill. */
+  .seal-tag {
+    @apply inline-flex items-center gap-1.5 rounded-[3px] border-l-[3px] bg-white py-1 pl-2 pr-2.5 text-xs font-medium tracking-wide dark:bg-graphite;
+  }
+}

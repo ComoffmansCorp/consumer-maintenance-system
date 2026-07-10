@@ -34,8 +34,17 @@ application-secret.properties
 ### Credentials / Environment ###
 .env
 .env.*
+!.env.example
 *.key
 *.pem
+
+### Go ###
+/bin/
+*.test
+
+### Node / Vite (frontend) ###
+frontend/node_modules/
+frontend/dist/
 
 ### OS files ###
 .DS_Store
