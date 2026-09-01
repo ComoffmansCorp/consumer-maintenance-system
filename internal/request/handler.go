@@ -141,7 +141,14 @@ func (h *Handler) getRequest(w http.ResponseWriter, r *http.Request) {
 		h.writeError(w, err)
 		return
 	}
-	if dto.ClientID != auth.UserID && (dto.MasterID == nil || *dto.MasterID != auth.UserID) {
+	isParticipant := dto.ClientID == auth.UserID || (dto.MasterID != nil && *dto.MasterID == auth.UserID)
+	// A master browsing the open pool hasn't been assigned yet (MasterID is
+	// nil) -- they still need to see the request's details to decide
+	// whether to submit an offer, so OPEN requests are readable by any
+	// master, not just participants. Once assigned/completed/canceled, only
+	// the client and the assigned master can see it.
+	isMasterBrowsingOpen := auth.Role == roleMaster && dto.Status == StatusOpen
+	if !isParticipant && !isMasterBrowsingOpen {
 		httpx.WriteProblem(w, http.StatusForbidden, "Forbidden", "Not your request")
 		return
 	}
