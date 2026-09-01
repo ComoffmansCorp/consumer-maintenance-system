@@ -100,13 +100,16 @@ func NewRouter(deps Dependencies) http.Handler {
 			reviewRouter.Mount("/", deps.ReviewHandler.Routes())
 		})
 
-		// PaymentHandler and ChatHandler each mount their own
-		// "/requests/{id}/..." sub-resource, so they ride directly under
-		// /api rather than under /api/requests -- the request domain's own
-		// router already owns everything at /api/requests/{id}/* that
-		// belongs to it.
-		api.Mount("/", deps.PaymentHandler.Routes())
-		api.Mount("/", deps.ChatHandler.Routes())
+		// PaymentHandler and ChatHandler each own a "/requests/{id}/..."
+		// sub-resource that rides alongside (not under) RequestHandler's own
+		// "/requests" mount. chi.Mount() claims its whole prefix subtree, so
+		// two Mount("/", ...) calls on the same router panic at startup
+		// ("attempting to Mount() a handler on an existing path, '/'") even
+		// though the leaf patterns below don't actually collide -- register
+		// the individual routes directly instead of mounting a sub-router.
+		api.Get("/requests/{id}/payment", deps.PaymentHandler.GetForRequest)
+		api.Get("/requests/{id}/messages", deps.ChatHandler.ListMessages)
+		api.Post("/requests/{id}/messages", deps.ChatHandler.SendMessage)
 
 		// Cross-cutting admin dashboards live under one shared /api/admin
 		// namespace rather than nested inside each domain's own mount --

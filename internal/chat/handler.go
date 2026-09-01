@@ -22,12 +22,12 @@ func NewHandler(service *Service) *Handler {
 
 func (h *Handler) Routes() chi.Router {
 	r := chi.NewRouter()
-	r.Get("/requests/{id}/messages", h.listMessages)
-	r.Post("/requests/{id}/messages", h.sendMessage)
+	r.Get("/requests/{id}/messages", h.ListMessages)
+	r.Post("/requests/{id}/messages", h.SendMessage)
 	return r
 }
 
-func (h *Handler) listMessages(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) ListMessages(w http.ResponseWriter, r *http.Request) {
 	auth, ok := middleware.AuthFromContext(r.Context())
 	if !ok {
 		httpx.WriteProblem(w, http.StatusUnauthorized, "Unauthorized", "Authentication required")
@@ -50,7 +50,7 @@ func (h *Handler) listMessages(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, http.StatusOK, messages)
 }
 
-func (h *Handler) sendMessage(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) SendMessage(w http.ResponseWriter, r *http.Request) {
 	auth, ok := middleware.AuthFromContext(r.Context())
 	if !ok {
 		httpx.WriteProblem(w, http.StatusUnauthorized, "Unauthorized", "Authentication required")

@@ -56,6 +56,34 @@ async function handleLogout() {
           >
             Услуги
           </RouterLink>
+          <RouterLink
+            v-if="auth.isAuthenticated && auth.role === 'SUPER_ADMIN'"
+            :to="{ name: 'admin-requests' }"
+            class="hover:text-[#5B4BE0]"
+          >
+            Заявки
+          </RouterLink>
+          <RouterLink
+            v-if="auth.isAuthenticated && auth.role === 'SUPER_ADMIN'"
+            :to="{ name: 'admin-masters' }"
+            class="hover:text-[#5B4BE0]"
+          >
+            Мастера
+          </RouterLink>
+          <RouterLink
+            v-if="auth.isAuthenticated && auth.role === 'SUPER_ADMIN'"
+            :to="{ name: 'admin-reviews' }"
+            class="hover:text-[#5B4BE0]"
+          >
+            Отзывы
+          </RouterLink>
+          <RouterLink
+            v-if="auth.isAuthenticated && auth.role === 'SUPER_ADMIN'"
+            :to="{ name: 'admin-payments' }"
+            class="hover:text-[#5B4BE0]"
+          >
+            Платежи
+          </RouterLink>
         </nav>
         <div class="ml-auto flex items-center gap-3">
           <template v-if="auth.isAuthenticated">

@@ -23,7 +23,7 @@ func NewHandler(service *Service) *Handler {
 
 func (h *Handler) Routes() chi.Router {
 	r := chi.NewRouter()
-	r.Get("/requests/{id}/payment", h.getForRequest)
+	r.Get("/requests/{id}/payment", h.GetForRequest)
 	return r
 }
 
@@ -36,7 +36,7 @@ func (h *Handler) AdminRoutes() chi.Router {
 	return r
 }
 
-func (h *Handler) getForRequest(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) GetForRequest(w http.ResponseWriter, r *http.Request) {
 	auth, ok := middleware.AuthFromContext(r.Context())
 	if !ok {
 		httpx.WriteProblem(w, http.StatusUnauthorized, "Unauthorized", "Authentication required")

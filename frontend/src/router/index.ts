@@ -68,6 +68,30 @@ const router = createRouter({
       meta: { marketplaceRoles: ['SUPER_ADMIN'] },
     },
     {
+      path: '/admin/requests',
+      name: 'admin-requests',
+      component: () => import('@/views/marketplace/admin/MarketplaceAdminRequestsView.vue'),
+      meta: { marketplaceRoles: ['SUPER_ADMIN'] },
+    },
+    {
+      path: '/admin/masters',
+      name: 'admin-masters',
+      component: () => import('@/views/marketplace/admin/MarketplaceAdminMastersView.vue'),
+      meta: { marketplaceRoles: ['SUPER_ADMIN'] },
+    },
+    {
+      path: '/admin/reviews',
+      name: 'admin-reviews',
+      component: () => import('@/views/marketplace/admin/MarketplaceAdminReviewsView.vue'),
+      meta: { marketplaceRoles: ['SUPER_ADMIN'] },
+    },
+    {
+      path: '/admin/payments',
+      name: 'admin-payments',
+      component: () => import('@/views/marketplace/admin/MarketplaceAdminPaymentsView.vue'),
+      meta: { marketplaceRoles: ['SUPER_ADMIN'] },
+    },
+    {
       path: '/:pathMatch(.*)*',
       name: 'not-found',
       component: () => import('@/views/NotFoundView.vue'),

@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
-import { requestsApi, paymentsApi, reviewsApi } from '@/api/marketplace'
+import { onMounted, onUnmounted, ref } from 'vue'
+import { requestsApi, paymentsApi, reviewsApi, chatApi } from '@/api/marketplace'
 import { extractErrorMessage } from '@/api/client'
 import { useToastStore } from '@/stores/toast'
-import type { RequestDTO, OfferDTO, PaymentDTO } from '@/types'
+import { useAuthStore } from '@/stores/auth'
+import type { RequestDTO, OfferDTO, PaymentDTO, MessageDTO } from '@/types'
 import MarketplaceShell from '@/components/layout/MarketplaceShell.vue'
 
 const requestStatusLabels: Record<string, string> = {
@@ -31,6 +32,7 @@ const paymentStatusStyles: Record<string, { bg: string; fg: string }> = {
 
 const props = defineProps<{ id: string }>()
 const toast = useToastStore()
+const auth = useAuthStore()
 
 const request = ref<RequestDTO | null>(null)
 const offers = ref<OfferDTO[]>([])
@@ -38,6 +40,40 @@ const payment = ref<PaymentDTO | null>(null)
 const loading = ref(true)
 const error = ref('')
 const working = ref(false)
+
+const messages = ref<MessageDTO[]>([])
+const newMessage = ref('')
+let chatTimer: ReturnType<typeof setInterval> | null = null
+
+async function pollMessages() {
+  if (!request.value) return
+  try {
+    messages.value = await chatApi.listMessages(request.value.id)
+  } catch {
+    // Chat polling failure is silent -- the rest of the page still works,
+    // no need to interrupt the user with an error toast every few seconds.
+  }
+}
+
+function startChatPolling() {
+  pollMessages()
+  chatTimer = setInterval(pollMessages, 5000)
+}
+
+async function sendMessage() {
+  if (!request.value || !newMessage.value.trim()) return
+  try {
+    await chatApi.send(request.value.id, newMessage.value.trim())
+    newMessage.value = ''
+    await pollMessages()
+  } catch (e) {
+    toast.error(extractErrorMessage(e))
+  }
+}
+
+onUnmounted(() => {
+  if (chatTimer) clearInterval(chatTimer)
+})
 
 async function load() {
   loading.value = true
@@ -49,6 +85,9 @@ async function load() {
     }
     if (request.value.status === 'ASSIGNED' || request.value.status === 'COMPLETED') {
       payment.value = await paymentsApi.getForRequest(request.value.id).catch(() => null)
+    }
+    if (request.value.masterId) {
+      startChatPolling()
     }
   } catch (e) {
     error.value = extractErrorMessage(e)
@@ -244,6 +283,32 @@ function formatDateTime(iso?: string) {
               </button>
             </form>
           </template>
+        </div>
+
+        <div v-if="request.masterId" class="mt-4 flex flex-col rounded-2xl border border-[#E2DED2] bg-white p-6">
+          <p class="mk-display text-base font-semibold">Чат с мастером</p>
+          <div class="mt-3 flex max-h-80 flex-col gap-2 overflow-y-auto">
+            <p v-if="messages.length === 0" class="text-sm text-[#9B978A]">Сообщений пока нет.</p>
+            <div
+              v-for="m in messages"
+              :key="m.id"
+              class="max-w-[80%] rounded-xl px-3 py-2 text-sm"
+              :class="m.senderId === auth.userId ? 'self-end bg-[#5B4BE0] text-white' : 'self-start bg-[#F1EDE3] text-[#17160F]'"
+            >
+              {{ m.text }}
+            </div>
+          </div>
+          <form class="mt-3 flex gap-2" @submit.prevent="sendMessage">
+            <input
+              v-model="newMessage"
+              type="text"
+              placeholder="Сообщение…"
+              class="flex-1 rounded-xl border border-[#E2DED2] px-4 py-2.5 text-base outline-none focus-visible:border-[#5B4BE0]"
+            />
+            <button type="submit" class="rounded-[11px] bg-[#5B4BE0] px-4 py-2.5 text-sm font-medium text-white hover:opacity-90">
+              Отправить
+            </button>
+          </form>
         </div>
       </template>
     </div>
