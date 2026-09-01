@@ -1,10 +1,23 @@
 <script setup lang="ts">
 import { onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { marketplaceApi, requestStatusLabels, requestStatusStyles } from '@/api/marketplace'
+import { requestsApi } from '@/api/marketplace'
 import type { RequestDTO } from '@/types'
 import { extractErrorMessage } from '@/api/client'
 import MarketplaceShell from '@/components/layout/MarketplaceShell.vue'
+
+const requestStatusLabels: Record<string, string> = {
+  OPEN: 'Открыта',
+  ASSIGNED: 'В работе',
+  COMPLETED: 'Выполнена',
+  CANCELED: 'Отменена',
+}
+const requestStatusStyles: Record<string, { bg: string; fg: string }> = {
+  OPEN: { bg: '#EFEBE1', fg: '#55524A' },
+  ASSIGNED: { bg: '#E7E3FC', fg: '#5B4BE0' },
+  COMPLETED: { bg: '#DCEFE1', fg: '#2E7D4F' },
+  CANCELED: { bg: '#FBE9E7', fg: '#B3261E' },
+}
 
 const router = useRouter()
 
@@ -19,7 +32,7 @@ async function load() {
   loading.value = true
   error.value = ''
   try {
-    const result = await marketplaceApi.listMyRequests({ page: page.value, pageSize: 20 })
+    const result = await requestsApi.listMine(page.value, 20)
     items.value = result.items
     totalPages.value = result.totalPages
     totalItems.value = result.totalItems

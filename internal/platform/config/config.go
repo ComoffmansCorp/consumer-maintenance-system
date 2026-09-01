@@ -9,15 +9,14 @@ import (
 )
 
 type Config struct {
-	AppEnv            string
-	HTTPAddr          string
-	DatabaseURL       string
-	JWTSecret         string
-	JWTAccessTTL      time.Duration
-	JWTRefreshTTL     time.Duration
+	AppEnv             string
+	HTTPAddr           string
+	DatabaseURL        string
+	JWTSecret          string
+	JWTAccessTTL       time.Duration
+	JWTRefreshTTL      time.Duration
 	CORSAllowedOrigins []string
-	FileUploadDir     string
-	ShutdownTimeout   time.Duration
+	ShutdownTimeout    time.Duration
 }
 
 func Load() (Config, error) {
@@ -45,15 +44,14 @@ func Load() (Config, error) {
 	}
 
 	cfg := Config{
-		AppEnv:            getEnv("APP_ENV", "development"),
-		HTTPAddr:          getEnv("HTTP_ADDR", ":8080"),
-		DatabaseURL:       dbURL,
-		JWTSecret:         jwtSecret,
-		JWTAccessTTL:      time.Duration(accessMinutes) * time.Minute,
-		JWTRefreshTTL:     time.Duration(refreshDays) * 24 * time.Hour,
+		AppEnv:             getEnv("APP_ENV", "development"),
+		HTTPAddr:           getEnv("HTTP_ADDR", ":8080"),
+		DatabaseURL:        dbURL,
+		JWTSecret:          jwtSecret,
+		JWTAccessTTL:       time.Duration(accessMinutes) * time.Minute,
+		JWTRefreshTTL:      time.Duration(refreshDays) * 24 * time.Hour,
 		CORSAllowedOrigins: splitCSV(getEnv("CORS_ALLOWED_ORIGINS", "http://localhost:5173,http://localhost:8080")),
-		FileUploadDir:     getEnv("FILE_UPLOAD_DIR", "uploads"),
-		ShutdownTimeout:   time.Duration(shutdownSeconds) * time.Second,
+		ShutdownTimeout:    time.Duration(shutdownSeconds) * time.Second,
 	}
 
 	return cfg, nil

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { marketplaceApi } from '@/api/marketplace'
+import { catalogApi } from '@/api/marketplace'
 import { useAuthStore } from '@/stores/auth'
 import type { CategoryDTO, ServiceDTO } from '@/types'
 import MarketplaceShell from '@/components/layout/MarketplaceShell.vue'
@@ -19,8 +19,8 @@ async function load() {
   loading.value = true
   try {
     const [categoriesResult, servicesResult] = await Promise.all([
-      marketplaceApi.listCategories(),
-      marketplaceApi.listServices(),
+      catalogApi.listCategories(),
+      catalogApi.listServices(),
     ])
     categories.value = categoriesResult
     services.value = servicesResult

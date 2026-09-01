@@ -11,92 +11,94 @@ sql:
         emit_json_tags: true
         emit_empty_slices: true
   - engine: postgresql
-    queries: sql/organization
+    queries: sql/catalog
     schema: migrations
     gen:
       go:
-        package: orgdb
-        out: internal/organization/db
+        package: catalogdb
+        out: internal/catalog/db
+        sql_package: pgx/v5
+        emit_json_tags: true
+        emit_empty_slices: true
+        overrides:
+          - db_type: "pg_catalog.numeric"
+            go_type: "float64"
+          - db_type: "pg_catalog.numeric"
+            go_type:
+              type: "float64"
+              pointer: true
+            nullable: true
+  - engine: postgresql
+    queries: sql/master
+    schema: migrations
+    gen:
+      go:
+        package: masterdb
+        out: internal/master/db
+        sql_package: pgx/v5
+        emit_json_tags: true
+        emit_empty_slices: true
+        overrides:
+          - db_type: "pg_catalog.numeric"
+            go_type: "float64"
+          - db_type: "pg_catalog.numeric"
+            go_type:
+              type: "float64"
+              pointer: true
+            nullable: true
+  - engine: postgresql
+    queries: sql/request
+    schema: migrations
+    gen:
+      go:
+        package: requestdb
+        out: internal/request/db
+        sql_package: pgx/v5
+        emit_json_tags: true
+        emit_empty_slices: true
+        overrides:
+          - db_type: "pg_catalog.numeric"
+            go_type: "float64"
+          - db_type: "pg_catalog.numeric"
+            go_type:
+              type: "float64"
+              pointer: true
+            nullable: true
+  - engine: postgresql
+    queries: sql/review
+    schema: migrations
+    gen:
+      go:
+        package: reviewdb
+        out: internal/review/db
         sql_package: pgx/v5
         emit_json_tags: true
         emit_empty_slices: true
   - engine: postgresql
-    queries: sql/consumer
+    queries: sql/payment
     schema: migrations
     gen:
       go:
-        package: consumerdb
-        out: internal/consumer/db
+        package: paymentdb
+        out: internal/payment/db
         sql_package: pgx/v5
         emit_json_tags: true
         emit_empty_slices: true
+        overrides:
+          - db_type: "pg_catalog.numeric"
+            go_type: "float64"
+          - db_type: "pg_catalog.numeric"
+            go_type:
+              type: "float64"
+              pointer: true
+            nullable: true
   - engine: postgresql
-    queries: sql/address
+    queries: sql/chat
     schema: migrations
     gen:
       go:
-        package: addressdb
-        out: internal/address/db
-        sql_package: pgx/v5
-        emit_json_tags: true
-        emit_empty_slices: true
-  - engine: postgresql
-    queries: sql/meter
-    schema: migrations
-    gen:
-      go:
-        package: meterdb
-        out: internal/meter/db
-        sql_package: pgx/v5
-        emit_json_tags: true
-        emit_empty_slices: true
-  - engine: postgresql
-    queries: sql/task
-    schema: migrations
-    gen:
-      go:
-        package: taskdb
-        out: internal/task/db
-        sql_package: pgx/v5
-        emit_json_tags: true
-        emit_empty_slices: true
-  - engine: postgresql
-    queries: sql/act
-    schema: migrations
-    gen:
-      go:
-        package: actdb
-        out: internal/act/db
-        sql_package: pgx/v5
-        emit_json_tags: true
-        emit_empty_slices: true
-  - engine: postgresql
-    queries: sql/photo
-    schema: migrations
-    gen:
-      go:
-        package: photodb
-        out: internal/photo/db
-        sql_package: pgx/v5
-        emit_json_tags: true
-        emit_empty_slices: true
-  - engine: postgresql
-    queries: sql/notification
-    schema: migrations
-    gen:
-      go:
-        package: notificationdb
-        out: internal/notification/db
-        sql_package: pgx/v5
-        emit_json_tags: true
-        emit_empty_slices: true
-  - engine: postgresql
-    queries: sql/marketplace
-    schema: migrations
-    gen:
-      go:
-        package: marketplacedb
-        out: internal/marketplace/db
+        package: chatdb
+        out: internal/chat/db
         sql_package: pgx/v5
         emit_json_tags: true
         emit_empty_slices: true

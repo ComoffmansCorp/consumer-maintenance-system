@@ -12,9 +12,8 @@ import (
 )
 
 type Event struct {
-	Type     string
-	TenantID int64
-	Payload  map[string]any
+	Type    string
+	Payload map[string]any
 }
 
 type Handler func(ctx context.Context, event Event) error

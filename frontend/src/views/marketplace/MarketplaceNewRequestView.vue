@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { marketplaceApi } from '@/api/marketplace'
+import { catalogApi, requestsApi } from '@/api/marketplace'
 import { extractErrorMessage } from '@/api/client'
 import { useToastStore } from '@/stores/toast'
 import { useYandexSuggest } from '@/composables/useYandexSuggest'
@@ -31,8 +31,8 @@ async function load() {
   loading.value = true
   try {
     const [categoriesResult, servicesResult] = await Promise.all([
-      marketplaceApi.listCategories(),
-      marketplaceApi.listServices(),
+      catalogApi.listCategories(),
+      catalogApi.listServices(),
     ])
     categories.value = categoriesResult
     services.value = servicesResult
@@ -91,7 +91,7 @@ async function submit() {
   submitting.value = true
   error.value = ''
   try {
-    await marketplaceApi.createRequest({
+    await requestsApi.create({
       serviceId: Number(serviceId.value),
       description: description.value.trim(),
       addressText: addressText.value.trim(),

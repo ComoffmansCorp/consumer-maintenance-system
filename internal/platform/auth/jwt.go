@@ -8,11 +8,9 @@ import (
 )
 
 type Claims struct {
-	UserID     int64   `json:"userId"`
-	Role       string  `json:"role"`
-	TenantID   *int64  `json:"tenantId,omitempty"`
-	TenantCode *string `json:"tenantCode,omitempty"`
-	TokenType  string  `json:"tokenType"`
+	UserID    int64  `json:"userId"`
+	Role      string `json:"role"`
+	TokenType string `json:"tokenType"`
 	jwt.RegisteredClaims
 }
 
@@ -47,15 +45,13 @@ func (s *Service) RefreshTTL() time.Duration {
 	return s.refreshTTL
 }
 
-func (s *Service) IssueAccessToken(userID int64, role string, tenantID *int64, tenantCode *string) (string, int64, error) {
+func (s *Service) IssueAccessToken(userID int64, role string) (string, int64, error) {
 	now := time.Now().UTC()
 	expiresAt := now.Add(s.accessTTL)
 	claims := Claims{
-		UserID:     userID,
-		Role:       role,
-		TenantID:   tenantID,
-		TenantCode: tenantCode,
-		TokenType:  "access",
+		UserID:    userID,
+		Role:      role,
+		TokenType: "access",
 		RegisteredClaims: jwt.RegisteredClaims{
 			Subject:   fmt.Sprintf("%d", userID),
 			IssuedAt:  jwt.NewNumericDate(now),

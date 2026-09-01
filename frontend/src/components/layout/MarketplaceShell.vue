@@ -29,11 +29,32 @@ async function handleLogout() {
             Мои заявки
           </RouterLink>
           <RouterLink
+            v-if="auth.isAuthenticated && auth.role === 'CLIENT'"
+            :to="{ name: 'marketplace-favorites' }"
+            class="hover:text-[#5B4BE0]"
+          >
+            Избранное
+          </RouterLink>
+          <RouterLink
             v-if="auth.isAuthenticated && auth.role === 'MASTER'"
             :to="{ name: 'marketplace' }"
             class="hover:text-[#5B4BE0]"
           >
             Профиль мастера
+          </RouterLink>
+          <RouterLink
+            v-if="auth.isAuthenticated && auth.role === 'SUPER_ADMIN'"
+            :to="{ name: 'admin-categories' }"
+            class="hover:text-[#5B4BE0]"
+          >
+            Категории
+          </RouterLink>
+          <RouterLink
+            v-if="auth.isAuthenticated && auth.role === 'SUPER_ADMIN'"
+            :to="{ name: 'admin-services' }"
+            class="hover:text-[#5B4BE0]"
+          >
+            Услуги
           </RouterLink>
         </nav>
         <div class="ml-auto flex items-center gap-3">

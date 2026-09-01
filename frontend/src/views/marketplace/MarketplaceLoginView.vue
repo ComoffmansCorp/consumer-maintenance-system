@@ -18,8 +18,8 @@ async function submit() {
   loading.value = true
   error.value = ''
   try {
-    await auth.login({ tenantCode: '', username: username.value, password: password.value })
-    const redirect = (route.query.redirect as string) || '/marketplace/my-requests'
+    await auth.login({ username: username.value, password: password.value })
+    const redirect = (route.query.redirect as string) || '/my-requests'
     router.push(redirect)
   } catch (e) {
     error.value = extractErrorMessage(e)

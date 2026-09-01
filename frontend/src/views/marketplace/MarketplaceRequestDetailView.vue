@@ -1,15 +1,40 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
-import { marketplaceApi, requestStatusLabels, requestStatusStyles } from '@/api/marketplace'
+import { requestsApi, paymentsApi, reviewsApi } from '@/api/marketplace'
 import { extractErrorMessage } from '@/api/client'
 import { useToastStore } from '@/stores/toast'
-import type { RequestDTO } from '@/types'
+import type { RequestDTO, OfferDTO, PaymentDTO } from '@/types'
 import MarketplaceShell from '@/components/layout/MarketplaceShell.vue'
+
+const requestStatusLabels: Record<string, string> = {
+  OPEN: 'Открыта',
+  ASSIGNED: 'В работе',
+  COMPLETED: 'Выполнена',
+  CANCELED: 'Отменена',
+}
+const requestStatusStyles: Record<string, { bg: string; fg: string }> = {
+  OPEN: { bg: '#EFEBE1', fg: '#55524A' },
+  ASSIGNED: { bg: '#E7E3FC', fg: '#5B4BE0' },
+  COMPLETED: { bg: '#DCEFE1', fg: '#2E7D4F' },
+  CANCELED: { bg: '#FBE9E7', fg: '#B3261E' },
+}
+const paymentStatusLabels: Record<string, string> = {
+  HELD: 'Удержана (эскроу)',
+  RELEASED: 'Выплачена мастеру',
+  REFUNDED: 'Возвращена клиенту',
+}
+const paymentStatusStyles: Record<string, { bg: string; fg: string }> = {
+  HELD: { bg: '#EFEBE1', fg: '#55524A' },
+  RELEASED: { bg: '#DCEFE1', fg: '#2E7D4F' },
+  REFUNDED: { bg: '#FBE9E7', fg: '#B3261E' },
+}
 
 const props = defineProps<{ id: string }>()
 const toast = useToastStore()
 
 const request = ref<RequestDTO | null>(null)
+const offers = ref<OfferDTO[]>([])
+const payment = ref<PaymentDTO | null>(null)
 const loading = ref(true)
 const error = ref('')
 const working = ref(false)
@@ -18,7 +43,13 @@ async function load() {
   loading.value = true
   error.value = ''
   try {
-    request.value = await marketplaceApi.getRequest(Number(props.id))
+    request.value = await requestsApi.get(Number(props.id))
+    if (request.value.status === 'OPEN') {
+      offers.value = await requestsApi.listOffers(request.value.id)
+    }
+    if (request.value.status === 'ASSIGNED' || request.value.status === 'COMPLETED') {
+      payment.value = await paymentsApi.getForRequest(request.value.id).catch(() => null)
+    }
   } catch (e) {
     error.value = extractErrorMessage(e)
   } finally {
@@ -27,6 +58,42 @@ async function load() {
 }
 onMounted(load)
 
+async function acceptOffer(offer: OfferDTO) {
+  if (!request.value) return
+  working.value = true
+  try {
+    request.value = await requestsApi.acceptOffer(request.value.id, offer.id)
+    toast.success('Мастер выбран')
+    offers.value = []
+  } catch (e) {
+    toast.error(extractErrorMessage(e))
+  } finally {
+    working.value = false
+  }
+}
+
+const reviewRating = ref(5)
+const reviewComment = ref('')
+const reviewSubmitted = ref(false)
+
+async function submitReview() {
+  if (!request.value) return
+  working.value = true
+  try {
+    await reviewsApi.create({
+      requestId: request.value.id,
+      rating: reviewRating.value,
+      comment: reviewComment.value,
+    })
+    reviewSubmitted.value = true
+    toast.success('Спасибо за отзыв')
+  } catch (e) {
+    toast.error(extractErrorMessage(e))
+  } finally {
+    working.value = false
+  }
+}
+
 const showCancel = ref(false)
 const cancelReason = ref('')
 
@@ -34,7 +101,7 @@ async function cancel() {
   if (!request.value || !cancelReason.value.trim()) return
   working.value = true
   try {
-    request.value = await marketplaceApi.cancelRequest(request.value.id, cancelReason.value)
+    request.value = await requestsApi.cancel(request.value.id, cancelReason.value)
     toast.success('Заявка отменена')
     showCancel.value = false
     cancelReason.value = ''
@@ -92,11 +159,24 @@ function formatDateTime(iso?: string) {
           </div>
           <div>
             <p class="font-mono text-[11px] uppercase tracking-[0.1em] text-[#9B978A]">Мастер</p>
-            <p class="mt-1 text-sm">{{ request.masterName || 'Ещё не назначен' }}</p>
+            <p class="mt-1 text-sm">{{ request.masterId ? `Мастер #${request.masterId}` : 'Ещё не назначен' }}</p>
           </div>
           <div>
             <p class="font-mono text-[11px] uppercase tracking-[0.1em] text-[#9B978A]">Создана</p>
             <p class="mt-1 font-mono text-sm">{{ formatDateTime(request.createdAt) }}</p>
+          </div>
+          <div v-if="request.agreedPrice" class="sm:col-span-2">
+            <p class="font-mono text-[11px] uppercase tracking-[0.1em] text-[#9B978A]">Согласованная цена</p>
+            <p class="mt-1 text-sm">{{ request.agreedPrice }} ₽</p>
+          </div>
+          <div v-if="payment" class="sm:col-span-2">
+            <p class="font-mono text-[11px] uppercase tracking-[0.1em] text-[#9B978A]">Оплата</p>
+            <span
+              class="mt-1 inline-flex w-fit items-center gap-1.5 rounded-[3px] border-l-[3px] px-2.5 py-1 text-xs font-medium"
+              :style="{ borderLeftColor: paymentStatusStyles[payment.status].fg, background: paymentStatusStyles[payment.status].bg, color: paymentStatusStyles[payment.status].fg }"
+            >
+              {{ paymentStatusLabels[payment.status] }}
+            </span>
           </div>
           <div v-if="request.cancelReason" class="sm:col-span-2">
             <p class="font-mono text-[11px] uppercase tracking-[0.1em] text-[#9B978A]">Причина отмены</p>
@@ -104,8 +184,35 @@ function formatDateTime(iso?: string) {
           </div>
         </div>
 
+        <div v-if="request.status === 'OPEN' && offers.length" class="mt-4 rounded-2xl border border-[#E2DED2] bg-white p-6">
+          <p class="mk-display text-base font-semibold">Отклики мастеров ({{ offers.length }})</p>
+          <ul class="mt-3 flex flex-col gap-2">
+            <li
+              v-for="offer in offers"
+              :key="offer.id"
+              class="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[#E2DED2] px-4 py-3"
+            >
+              <div>
+                <p class="text-sm font-medium">{{ offer.price }} ₽ — мастер #{{ offer.masterId }}</p>
+                <p v-if="offer.comment" class="mt-0.5 text-sm text-[#6E6B60]">{{ offer.comment }}</p>
+              </div>
+              <button
+                type="button"
+                :disabled="working"
+                class="rounded-[11px] bg-[#5B4BE0] px-3 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-60"
+                @click="acceptOffer(offer)"
+              >
+                Выбрать
+              </button>
+            </li>
+          </ul>
+        </div>
+        <p v-else-if="request.status === 'OPEN'" class="mt-4 text-sm text-[#6E6B60]">
+          Пока никто из мастеров не откликнулся.
+        </p>
+
         <div
-          v-if="request.status === 'OPEN' || request.status === 'IN_PROGRESS'"
+          v-if="request.status === 'OPEN' || request.status === 'ASSIGNED'"
           class="mt-4 flex flex-wrap items-center gap-3 rounded-2xl border border-[#E2DED2] bg-white p-6"
         >
           <button
@@ -115,6 +222,28 @@ function formatDateTime(iso?: string) {
           >
             Отменить заявку
           </button>
+        </div>
+
+        <div v-if="request.status === 'COMPLETED'" class="mt-4 rounded-2xl border border-[#E2DED2] bg-white p-6">
+          <template v-if="reviewSubmitted">
+            <p class="text-sm text-[#2E7D4F]">Отзыв отправлен, спасибо!</p>
+          </template>
+          <template v-else>
+            <p class="mk-display text-base font-semibold">Оставить отзыв мастеру</p>
+            <form class="mt-3 flex flex-col gap-3" @submit.prevent="submitReview">
+              <label class="flex flex-col gap-1.5">
+                <span class="font-mono text-[11px] uppercase tracking-[0.1em] text-[#9B978A]">Оценка (1–5)</span>
+                <input v-model.number="reviewRating" type="number" min="1" max="5" required class="w-24 rounded-xl border border-[#E2DED2] px-4 py-2.5 text-base outline-none focus-visible:border-[#5B4BE0]" />
+              </label>
+              <label class="flex flex-col gap-1.5">
+                <span class="font-mono text-[11px] uppercase tracking-[0.1em] text-[#9B978A]">Комментарий</span>
+                <textarea v-model="reviewComment" rows="3" class="rounded-xl border border-[#E2DED2] px-4 py-2.5 text-base outline-none focus-visible:border-[#5B4BE0]" />
+              </label>
+              <button type="submit" :disabled="working" class="w-fit rounded-[11px] bg-[#5B4BE0] px-4 py-2.5 text-sm font-medium text-white hover:opacity-90 disabled:opacity-60">
+                Отправить отзыв
+              </button>
+            </form>
+          </template>
         </div>
       </template>
     </div>

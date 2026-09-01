@@ -8,7 +8,6 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/jackc/pgx/v5 v5.7.4
 	github.com/prometheus/client_golang v1.22.0
-	github.com/signintech/gopdf v0.36.1
 	golang.org/x/crypto v0.37.0
 )
 
@@ -19,8 +18,6 @@ require (
 	github.com/jackc/pgservicefile v0.0.0-20240606120523-5a60cdf6a761 // indirect
 	github.com/jackc/puddle/v2 v2.2.2 // indirect
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
-	github.com/phpdave11/gofpdi v1.0.14-0.20211212211723-1f10f9844311 // indirect
-	github.com/pkg/errors v0.8.1 // indirect
 	github.com/prometheus/client_model v0.6.1 // indirect
 	github.com/prometheus/common v0.62.0 // indirect
 	github.com/prometheus/procfs v0.15.1 // indirect

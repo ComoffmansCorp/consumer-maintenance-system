@@ -8,37 +8,20 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-type Address struct {
-	ID         int64              `json:"id"`
-	Street     string             `json:"street"`
-	House      string             `json:"house"`
-	Building   pgtype.Text        `json:"building"`
-	Apartment  pgtype.Text        `json:"apartment"`
-	TenantID   int64              `json:"tenant_id"`
-	ConsumerID pgtype.Int8        `json:"consumer_id"`
-	CreatedAt  pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt  pgtype.Timestamptz `json:"updated_at"`
-}
-
-type InspectionAct struct {
-	ID             int64              `json:"id"`
-	TaskID         pgtype.Int8        `json:"task_id"`
-	TenantID       int64              `json:"tenant_id"`
-	AddressID      int64              `json:"address_id"`
-	InspectionDate pgtype.Date        `json:"inspection_date"`
-	ConsumerID     pgtype.Int8        `json:"consumer_id"`
-	InspectionType pgtype.Text        `json:"inspection_type"`
-	Notes          pgtype.Text        `json:"notes"`
-	CreatedAt      pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
+type Favorite struct {
+	ClientID  int64              `json:"client_id"`
+	MasterID  int64              `json:"master_id"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
 }
 
 type MasterProfile struct {
-	UserID    int64              `json:"user_id"`
-	City      pgtype.Text        `json:"city"`
-	Bio       pgtype.Text        `json:"bio"`
-	CreatedAt pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
+	UserID      int64              `json:"user_id"`
+	City        pgtype.Text        `json:"city"`
+	Bio         pgtype.Text        `json:"bio"`
+	RatingAvg   pgtype.Numeric     `json:"rating_avg"`
+	RatingCount int32              `json:"rating_count"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
 }
 
 type MasterSpecialization struct {
@@ -46,53 +29,23 @@ type MasterSpecialization struct {
 	ServiceID    int64 `json:"service_id"`
 }
 
-type Meter struct {
-	ID                  int64              `json:"id"`
-	Type                string             `json:"type"`
-	SerialNumber        string             `json:"serial_number"`
-	ManufactureYear     pgtype.Int4        `json:"manufacture_year"`
-	VerificationDate    pgtype.Date        `json:"verification_date"`
-	SealState           pgtype.Text        `json:"seal_state"`
-	TransformationRatio pgtype.Int4        `json:"transformation_ratio"`
-	InspectionActID     pgtype.Int8        `json:"inspection_act_id"`
-	CreatedAt           pgtype.Timestamptz `json:"created_at"`
-}
-
-type Notification struct {
+type Message struct {
 	ID        int64              `json:"id"`
-	TenantID  int64              `json:"tenant_id"`
-	UserID    int64              `json:"user_id"`
-	Type      string             `json:"type"`
-	Title     string             `json:"title"`
-	Message   string             `json:"message"`
-	Payload   []byte             `json:"payload"`
-	ReadAt    pgtype.Timestamptz `json:"read_at"`
+	RequestID int64              `json:"request_id"`
+	SenderID  int64              `json:"sender_id"`
+	Text      string             `json:"text"`
 	CreatedAt pgtype.Timestamptz `json:"created_at"`
+	ReadAt    pgtype.Timestamptz `json:"read_at"`
 }
 
-type Organization struct {
+type Payment struct {
 	ID          int64              `json:"id"`
-	Name        string             `json:"name"`
-	Type        string             `json:"type"`
-	Description pgtype.Text        `json:"description"`
-	TenantID    int64              `json:"tenant_id"`
-	Active      bool               `json:"active"`
+	RequestID   int64              `json:"request_id"`
+	Amount      pgtype.Numeric     `json:"amount"`
+	PlatformFee pgtype.Numeric     `json:"platform_fee"`
+	Status      string             `json:"status"`
 	CreatedAt   pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
-}
-
-type Photo struct {
-	ID               int64              `json:"id"`
-	Filename         string             `json:"filename"`
-	Note             pgtype.Text        `json:"note"`
-	TenantID         int64              `json:"tenant_id"`
-	InspectionActID  pgtype.Int8        `json:"inspection_act_id"`
-	ReplacementActID pgtype.Int8        `json:"replacement_act_id"`
-	OriginalFilename string             `json:"original_filename"`
-	ContentType      string             `json:"content_type"`
-	SizeBytes        int64              `json:"size_bytes"`
-	UploadedBy       pgtype.Int8        `json:"uploaded_by"`
-	CreatedAt        pgtype.Timestamptz `json:"created_at"`
 }
 
 type RefreshToken struct {
@@ -104,21 +57,36 @@ type RefreshToken struct {
 	RevokedAt pgtype.Timestamptz `json:"revoked_at"`
 }
 
-type ReplacementAct struct {
-	ID               int64              `json:"id"`
-	TaskID           pgtype.Int8        `json:"task_id"`
-	TenantID         int64              `json:"tenant_id"`
-	AddressID        int64              `json:"address_id"`
-	AccountNumber    string             `json:"account_number"`
-	InstallationDate pgtype.Date        `json:"installation_date"`
-	OldBrand         pgtype.Text        `json:"old_brand"`
-	OldSerialNumber  pgtype.Text        `json:"old_serial_number"`
-	OldReadings      pgtype.Float8      `json:"old_readings"`
-	NewBrand         pgtype.Text        `json:"new_brand"`
-	NewSerialNumber  pgtype.Text        `json:"new_serial_number"`
-	NewReadings      pgtype.Float8      `json:"new_readings"`
-	CreatedAt        pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt        pgtype.Timestamptz `json:"updated_at"`
+type RequestOffer struct {
+	ID        int64              `json:"id"`
+	RequestID int64              `json:"request_id"`
+	MasterID  int64              `json:"master_id"`
+	Price     pgtype.Numeric     `json:"price"`
+	Comment   pgtype.Text        `json:"comment"`
+	Status    string             `json:"status"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
+}
+
+type RequestStatusHistory struct {
+	ID         int64              `json:"id"`
+	RequestID  int64              `json:"request_id"`
+	FromStatus pgtype.Text        `json:"from_status"`
+	ToStatus   string             `json:"to_status"`
+	ChangedBy  int64              `json:"changed_by"`
+	Comment    pgtype.Text        `json:"comment"`
+	CreatedAt  pgtype.Timestamptz `json:"created_at"`
+}
+
+type Review struct {
+	ID        int64              `json:"id"`
+	RequestID int64              `json:"request_id"`
+	ClientID  int64              `json:"client_id"`
+	MasterID  int64              `json:"master_id"`
+	Rating    int16              `json:"rating"`
+	Comment   pgtype.Text        `json:"comment"`
+	Hidden    bool               `json:"hidden"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
 }
 
 type Service struct {
@@ -126,15 +94,21 @@ type Service struct {
 	CategoryID  int64              `json:"category_id"`
 	Name        string             `json:"name"`
 	Description pgtype.Text        `json:"description"`
+	PriceFrom   pgtype.Numeric     `json:"price_from"`
+	PriceTo     pgtype.Numeric     `json:"price_to"`
+	Unit        pgtype.Text        `json:"unit"`
 	Active      bool               `json:"active"`
 	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
 }
 
 type ServiceCategory struct {
-	ID        int64              `json:"id"`
-	Name      string             `json:"name"`
-	Active    bool               `json:"active"`
-	CreatedAt pgtype.Timestamptz `json:"created_at"`
+	ID               int64              `json:"id"`
+	ParentCategoryID pgtype.Int8        `json:"parent_category_id"`
+	Name             string             `json:"name"`
+	Active           bool               `json:"active"`
+	CreatedAt        pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt        pgtype.Timestamptz `json:"updated_at"`
 }
 
 type ServiceRequest struct {
@@ -147,44 +121,18 @@ type ServiceRequest struct {
 	Longitude    pgtype.Float8      `json:"longitude"`
 	Status       string             `json:"status"`
 	MasterID     pgtype.Int8        `json:"master_id"`
+	AgreedPrice  pgtype.Numeric     `json:"agreed_price"`
+	CancelReason pgtype.Text        `json:"cancel_reason"`
 	CreatedAt    pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
-	ClaimedAt    pgtype.Timestamptz `json:"claimed_at"`
-	CompletedAt  pgtype.Timestamptz `json:"completed_at"`
-	CanceledAt   pgtype.Timestamptz `json:"canceled_at"`
-	CancelReason pgtype.Text        `json:"cancel_reason"`
-}
-
-type Task struct {
-	ID           int64              `json:"id"`
-	Type         string             `json:"type"`
-	TenantID     int64              `json:"tenant_id"`
-	AddressID    int64              `json:"address_id"`
-	Status       string             `json:"status"`
-	DueDate      pgtype.Date        `json:"due_date"`
-	AssigneeID   pgtype.Int8        `json:"assignee_id"`
-	CreatedAt    pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
-	CompletedAt  pgtype.Timestamptz `json:"completed_at"`
-	CanceledAt   pgtype.Timestamptz `json:"canceled_at"`
-	CancelReason pgtype.Text        `json:"cancel_reason"`
-}
-
-type Tenant struct {
-	ID        int64              `json:"id"`
-	Name      string             `json:"name"`
-	Code      string             `json:"code"`
-	Plan      string             `json:"plan"`
-	Active    bool               `json:"active"`
-	CreatedAt pgtype.Timestamptz `json:"created_at"`
 }
 
 type User struct {
-	ID        int64              `json:"id"`
-	Username  string             `json:"username"`
-	Password  string             `json:"password"`
-	FullName  pgtype.Text        `json:"full_name"`
-	Role      string             `json:"role"`
-	TenantID  pgtype.Int8        `json:"tenant_id"`
-	CreatedAt pgtype.Timestamptz `json:"created_at"`
+	ID           int64              `json:"id"`
+	Username     string             `json:"username"`
+	PasswordHash string             `json:"password_hash"`
+	FullName     pgtype.Text        `json:"full_name"`
+	Role         string             `json:"role"`
+	CreatedAt    pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
 }

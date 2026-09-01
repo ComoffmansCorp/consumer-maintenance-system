@@ -3,35 +3,21 @@ package auth
 import "time"
 
 type AuthResponse struct {
-	AccessToken  string  `json:"accessToken"`
-	RefreshToken string  `json:"refreshToken"`
-	ExpiresIn    int64   `json:"expiresIn"`
-	UserID       int64   `json:"userId"`
-	FullName     string  `json:"fullName"`
-	Role         Role    `json:"role"`
-	TenantID     *int64  `json:"tenantId,omitempty"`
-	TenantCode   *string `json:"tenantCode,omitempty"`
-	TenantName   *string `json:"tenantName,omitempty"`
-	TenantPlan   *string `json:"tenantPlan,omitempty"`
+	AccessToken  string `json:"accessToken"`
+	RefreshToken string `json:"refreshToken"`
+	ExpiresIn    int64  `json:"expiresIn"`
+	UserID       int64  `json:"userId"`
+	FullName     string `json:"fullName"`
+	Role         Role   `json:"role"`
 }
 
 type LoginRequest struct {
-	TenantCode string `json:"tenantCode"`
-	Username   string `json:"username"`
-	Password   string `json:"password"`
+	Username string `json:"username"`
+	Password string `json:"password"`
 }
 
 type RefreshRequest struct {
 	RefreshToken string `json:"refreshToken"`
-}
-
-type CompanyRegistrationRequest struct {
-	TenantName string `json:"tenantName"`
-	TenantCode string `json:"tenantCode"`
-	Plan       string `json:"plan"`
-	Username   string `json:"username"`
-	Password   string `json:"password"`
-	FullName   string `json:"fullName"`
 }
 
 type BootstrapSuperAdminRequest struct {
@@ -40,10 +26,8 @@ type BootstrapSuperAdminRequest struct {
 	FullName string `json:"fullName"`
 }
 
-// RegisterMarketplaceRequest is shared by client and master self-registration
-// on the public marketplace — both are platform-level users (no tenant),
-// unlike CompanyRegistrationRequest which also creates a tenant.
-type RegisterMarketplaceRequest struct {
+// RegisterRequest is shared by client and master self-registration.
+type RegisterRequest struct {
 	Username string `json:"username"`
 	Password string `json:"password"`
 	FullName string `json:"fullName"`
@@ -59,13 +43,6 @@ type UserDTO struct {
 	FullName  string    `json:"fullName"`
 	Role      Role      `json:"role"`
 	CreatedAt time.Time `json:"createdAt"`
-}
-
-type CreateTenantUserRequest struct {
-	Username string `json:"username"`
-	Password string `json:"password"`
-	FullName string `json:"fullName"`
-	Role     Role   `json:"role"`
 }
 
 func ToUserDTO(u User) UserDTO {

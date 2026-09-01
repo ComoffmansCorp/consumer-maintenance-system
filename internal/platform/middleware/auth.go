@@ -10,10 +10,8 @@ import (
 )
 
 type AuthContext struct {
-	UserID     int64
-	Role       string
-	TenantID   *int64
-	TenantCode *string
+	UserID int64
+	Role   string
 }
 
 type authContextKey struct{}
@@ -49,24 +47,12 @@ func JWTAuth(tokens *platformauth.Service, publicPaths map[string]struct{}) func
 			}
 
 			ctx := WithAuth(r.Context(), AuthContext{
-				UserID:     claims.UserID,
-				Role:       claims.Role,
-				TenantID:   claims.TenantID,
-				TenantCode: claims.TenantCode,
+				UserID: claims.UserID,
+				Role:   claims.Role,
 			})
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}
-}
-
-// TenantIDFromContext returns the tenant id carried by the authenticated
-// request. Platform-level users (SUPER_ADMIN) have no tenant and ok is false.
-func TenantIDFromContext(ctx context.Context) (int64, bool) {
-	auth, ok := AuthFromContext(ctx)
-	if !ok || auth.TenantID == nil {
-		return 0, false
-	}
-	return *auth.TenantID, true
 }
 
 func RequireRoles(roles ...string) func(http.Handler) http.Handler {

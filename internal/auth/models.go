@@ -5,25 +5,19 @@ import "time"
 type Role string
 
 const (
-	RoleSuperAdmin  Role = "SUPER_ADMIN"
-	RoleTenantAdmin Role = "TENANT_ADMIN"
-	RoleDispatcher  Role = "DISPATCHER"
-	RoleElectrician Role = "ELECTRICIAN"
-
-	// Marketplace roles: platform-level (TenantID == nil), same as
-	// RoleSuperAdmin — not tied to a single tenant/company.
-	RoleMaster Role = "MASTER"
-	RoleClient Role = "CLIENT"
+	RoleSuperAdmin Role = "SUPER_ADMIN"
+	RoleClient     Role = "CLIENT"
+	RoleMaster     Role = "MASTER"
 )
 
 type User struct {
-	ID        int64
-	Username  string
-	Password  string
-	FullName  string
-	Role      Role
-	TenantID  *int64
-	CreatedAt time.Time
+	ID           int64
+	Username     string
+	PasswordHash string
+	FullName     string
+	Role         Role
+	CreatedAt    time.Time
+	UpdatedAt    time.Time
 }
 
 type RefreshToken struct {

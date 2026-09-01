@@ -1,4 +1,4 @@
-export type Role = 'SUPER_ADMIN' | 'TENANT_ADMIN' | 'DISPATCHER' | 'ELECTRICIAN' | 'MASTER' | 'CLIENT'
+export type Role = 'SUPER_ADMIN' | 'CLIENT' | 'MASTER'
 
 export interface AuthResponse {
   accessToken: string
@@ -7,10 +7,6 @@ export interface AuthResponse {
   userId: number
   fullName: string
   role: Role
-  tenantId?: number
-  tenantCode?: string
-  tenantName?: string
-  tenantPlan?: string
 }
 
 export interface UserDTO {
@@ -37,150 +33,13 @@ export interface Problem {
   errors?: Record<string, unknown>
 }
 
-// --- organization (platform tenants) ---
-
-export type TenantPlan = 'FREE' | 'BUSINESS' | 'ENTERPRISE'
-
-export interface TenantDTO {
-  id: number
-  name: string
-  code: string
-  plan: TenantPlan
-  active: boolean
-}
-
-// --- consumer ---
-
-export type ConsumerType = 'COMMERCIAL' | 'GOVERNMENT' | 'RESIDENTIAL'
-
-export interface ConsumerDTO {
-  id: number
-  name: string
-  type: ConsumerType
-  description?: string
-  active: boolean
-  createdAt: string
-  updatedAt: string
-}
-
-// --- address ---
-
-export interface AddressDTO {
-  id: number
-  street: string
-  house: string
-  building?: string
-  apartment?: string
-  consumerId?: number
-  consumerName?: string
-  createdAt: string
-  updatedAt: string
-}
-
-// --- meter ---
-
-export type MeterType = 'SINGLE_PHASE' | 'THREE_PHASE_DIRECT' | 'THREE_PHASE_TRANSFORMER'
-export type SealState = 'INTACT' | 'BROKEN' | 'MISSING' | ''
-
-export interface MeterDTO {
-  id: number
-  type: MeterType
-  serialNumber: string
-  manufactureYear?: number
-  verificationDate?: string
-  sealState?: SealState
-  transformationRatio?: number
-  createdAt: string
-}
-
-// --- task ---
-
-export type TaskType = 'INSPECTION' | 'REPLACEMENT'
-export type TaskStatus = 'PENDING' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELED'
-
-export interface TaskDTO {
-  id: number
-  type: TaskType
-  addressId: number
-  addressLabel?: string
-  status: TaskStatus
-  dueDate?: string
-  assigneeId?: number
-  assigneeName?: string
-  createdAt: string
-  updatedAt: string
-  completedAt?: string
-  canceledAt?: string
-  cancelReason?: string
-}
-
-// --- act ---
-
-export type InspectionType = 'SCHEDULED' | 'UNSCHEDULED'
-
-export interface InspectionActDTO {
-  id: number
-  taskId: number
-  addressId: number
-  addressLabel?: string
-  inspectionDate?: string
-  consumerId?: number
-  consumerName?: string
-  inspectionType: InspectionType
-  notes?: string
-  meterCount: number
-  photoCount: number
-  createdAt: string
-  updatedAt: string
-}
-
-export interface ReplacementActDTO {
-  id: number
-  taskId: number
-  addressId: number
-  addressLabel?: string
-  accountNumber: string
-  installationDate?: string
-  oldBrand?: string
-  oldSerialNumber?: string
-  oldReadings?: number
-  newBrand?: string
-  newSerialNumber?: string
-  newReadings?: number
-  photoCount: number
-  createdAt: string
-  updatedAt: string
-}
-
-// --- photo ---
-
-export interface PhotoDTO {
-  id: number
-  note?: string
-  originalFilename: string
-  contentType: string
-  sizeBytes: number
-  createdAt: string
-}
-
-// --- notification ---
-
-export interface NotificationDTO {
-  id: number
-  type: string
-  title: string
-  message: string
-  payload?: Record<string, unknown>
-  read: boolean
-  createdAt: string
-}
-
-// --- marketplace (заявки клиентов, независимо от tenant) ---
+// --- catalog ---
 
 export interface CategoryDTO {
   id: number
   name: string
   active: boolean
+  subcategories?: CategoryDTO[]
 }
 
 export interface ServiceDTO {
@@ -188,35 +47,103 @@ export interface ServiceDTO {
   categoryId: number
   name: string
   description?: string
+  priceFrom?: number
+  priceTo?: number
+  unit?: string
   active: boolean
 }
 
-export type RequestStatus = 'OPEN' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELED'
+// --- master ---
+
+export interface ProfileDTO {
+  userId: number
+  city?: string
+  bio?: string
+  ratingAvg: number
+  ratingCount: number
+  specializationIds: number[]
+}
+
+// --- request / offers / favorites ---
+
+export type RequestStatus = 'OPEN' | 'ASSIGNED' | 'COMPLETED' | 'CANCELED'
+export type OfferStatus = 'PENDING' | 'ACCEPTED' | 'REJECTED' | 'WITHDRAWN'
+
+export interface StatusHistoryEntryDTO {
+  fromStatus?: string
+  toStatus: string
+  changedBy: number
+  comment?: string
+  createdAt: string
+}
 
 export interface RequestDTO {
   id: number
   serviceId: number
   serviceName?: string
-  categoryName?: string
   description: string
   addressText: string
   latitude?: number
   longitude?: number
   status: RequestStatus
   clientId: number
-  clientName?: string
   masterId?: number
-  masterName?: string
+  agreedPrice?: number
+  cancelReason?: string
   createdAt: string
   updatedAt: string
-  claimedAt?: string
-  completedAt?: string
-  canceledAt?: string
-  cancelReason?: string
+  history?: StatusHistoryEntryDTO[]
 }
 
-export interface MasterProfileDTO {
-  city?: string
-  bio?: string
-  specializationIds: number[]
+export interface OfferDTO {
+  id: number
+  requestId: number
+  masterId: number
+  price: number
+  comment?: string
+  status: OfferStatus
+  createdAt: string
+  updatedAt: string
+}
+
+export interface FavoriteDTO {
+  masterId: number
+  createdAt: string
+}
+
+// --- reviews ---
+
+export interface ReviewDTO {
+  id: number
+  requestId: number
+  clientId: number
+  masterId: number
+  rating: number
+  comment?: string
+  createdAt: string
+}
+
+// --- payments ---
+
+export type PaymentStatus = 'HELD' | 'RELEASED' | 'REFUNDED'
+
+export interface PaymentDTO {
+  id: number
+  requestId: number
+  amount: number
+  platformFee: number
+  status: PaymentStatus
+  createdAt: string
+  updatedAt: string
+}
+
+// --- chat ---
+
+export interface MessageDTO {
+  id: number
+  requestId: number
+  senderId: number
+  text: string
+  createdAt: string
+  readAt?: string
 }

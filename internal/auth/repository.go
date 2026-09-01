@@ -26,21 +26,10 @@ func (r *Repository) queriesFor(ctx context.Context) *db.Queries {
 	return r.queries
 }
 
-func (r *Repository) GetPlatformUser(ctx context.Context, username string) (User, error) {
-	row, err := r.queriesFor(ctx).GetUserByPlatformUsername(ctx, strings.TrimSpace(username))
+func (r *Repository) GetByUsername(ctx context.Context, username string) (User, error) {
+	row, err := r.queriesFor(ctx).GetUserByUsername(ctx, strings.TrimSpace(username))
 	if err != nil {
-		return User{}, fmt.Errorf("get platform user: %w", err)
-	}
-	return toUser(row), nil
-}
-
-func (r *Repository) GetTenantUser(ctx context.Context, tenantCode, username string) (User, error) {
-	row, err := r.queriesFor(ctx).GetUserByTenantCodeAndUsername(ctx, db.GetUserByTenantCodeAndUsernameParams{
-		TenantCode: strings.TrimSpace(tenantCode),
-		Username:   strings.TrimSpace(username),
-	})
-	if err != nil {
-		return User{}, fmt.Errorf("get tenant user: %w", err)
+		return User{}, fmt.Errorf("get user by username: %w", err)
 	}
 	return toUser(row), nil
 }
@@ -61,73 +50,20 @@ func (r *Repository) CountByRole(ctx context.Context, role Role) (int64, error) 
 	return count, nil
 }
 
-func (r *Repository) CountByTenantID(ctx context.Context, tenantID int64) (int64, error) {
-	count, err := r.queriesFor(ctx).CountUsersByTenantID(ctx, tenantID)
+func (r *Repository) ExistsByUsername(ctx context.Context, username string) (bool, error) {
+	exists, err := r.queriesFor(ctx).ExistsUserByUsername(ctx, strings.TrimSpace(username))
 	if err != nil {
-		return 0, fmt.Errorf("count users by tenant: %w", err)
-	}
-	return count, nil
-}
-
-func (r *Repository) ListByTenant(ctx context.Context, tenantID int64, role Role, limit, offset int32) ([]User, error) {
-	rows, err := r.queriesFor(ctx).ListUsersByTenant(ctx, db.ListUsersByTenantParams{
-		TenantID:   tenantID,
-		Role:       string(role),
-		PageLimit:  limit,
-		PageOffset: offset,
-	})
-	if err != nil {
-		return nil, fmt.Errorf("list users by tenant: %w", err)
-	}
-	out := make([]User, 0, len(rows))
-	for _, row := range rows {
-		out = append(out, toUser(row))
-	}
-	return out, nil
-}
-
-func (r *Repository) CountByTenantAndRole(ctx context.Context, tenantID int64, role Role) (int64, error) {
-	count, err := r.queriesFor(ctx).CountUsersByTenantAndRole(ctx, db.CountUsersByTenantAndRoleParams{
-		TenantID: tenantID,
-		Role:     string(role),
-	})
-	if err != nil {
-		return 0, fmt.Errorf("count users by tenant and role: %w", err)
-	}
-	return count, nil
-}
-
-func (r *Repository) ExistsInTenant(ctx context.Context, tenantID int64, username string) (bool, error) {
-	exists, err := r.queriesFor(ctx).ExistsUserInTenant(ctx, db.ExistsUserInTenantParams{
-		TenantID: pgtype.Int8{Int64: tenantID, Valid: true},
-		Username: strings.TrimSpace(username),
-	})
-	if err != nil {
-		return false, fmt.Errorf("exists user in tenant: %w", err)
+		return false, fmt.Errorf("exists user by username: %w", err)
 	}
 	return exists, nil
 }
 
-func (r *Repository) ExistsPlatformUser(ctx context.Context, username string) (bool, error) {
-	exists, err := r.queriesFor(ctx).ExistsPlatformUser(ctx, strings.TrimSpace(username))
-	if err != nil {
-		return false, fmt.Errorf("exists platform user: %w", err)
-	}
-	return exists, nil
-}
-
-func (r *Repository) Create(ctx context.Context, username, passwordHash, fullName string, role Role, tenantID *int64) (User, error) {
-	var tenant pgtype.Int8
-	if tenantID != nil {
-		tenant = pgtype.Int8{Int64: *tenantID, Valid: true}
-	}
-
+func (r *Repository) Create(ctx context.Context, username, passwordHash, fullName string, role Role) (User, error) {
 	row, err := r.queriesFor(ctx).CreateUser(ctx, db.CreateUserParams{
-		Username: username,
-		Password: passwordHash,
-		FullName: pgtype.Text{String: strings.TrimSpace(fullName), Valid: strings.TrimSpace(fullName) != ""},
-		Role:     string(role),
-		TenantID: tenant,
+		Username:     username,
+		PasswordHash: passwordHash,
+		FullName:     pgtype.Text{String: strings.TrimSpace(fullName), Valid: strings.TrimSpace(fullName) != ""},
+		Role:         string(role),
 	})
 	if err != nil {
 		return User{}, fmt.Errorf("create user: %w", err)
@@ -168,21 +104,17 @@ func (r *Repository) RevokeRefreshToken(ctx context.Context, tokenHash string) e
 }
 
 func toUser(row db.User) User {
-	var tenantID *int64
-	if row.TenantID.Valid {
-		tenantID = &row.TenantID.Int64
-	}
 	fullName := ""
 	if row.FullName.Valid {
 		fullName = row.FullName.String
 	}
 	return User{
-		ID:        row.ID,
-		Username:  row.Username,
-		Password:  row.Password,
-		FullName:  fullName,
-		Role:      Role(row.Role),
-		TenantID:  tenantID,
-		CreatedAt: row.CreatedAt.Time,
+		ID:           row.ID,
+		Username:     row.Username,
+		PasswordHash: row.PasswordHash,
+		FullName:     fullName,
+		Role:         Role(row.Role),
+		CreatedAt:    row.CreatedAt.Time,
+		UpdatedAt:    row.UpdatedAt.Time,
 	}
 }

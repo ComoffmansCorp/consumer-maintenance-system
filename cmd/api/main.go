@@ -9,32 +9,26 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/myurbondarchuk/consumer-maintenance-system/internal/act"
-	actdb "github.com/myurbondarchuk/consumer-maintenance-system/internal/act/db"
-	"github.com/myurbondarchuk/consumer-maintenance-system/internal/address"
-	addressdb "github.com/myurbondarchuk/consumer-maintenance-system/internal/address/db"
 	"github.com/myurbondarchuk/consumer-maintenance-system/internal/auth"
 	authdb "github.com/myurbondarchuk/consumer-maintenance-system/internal/auth/db"
-	"github.com/myurbondarchuk/consumer-maintenance-system/internal/consumer"
-	consumerdb "github.com/myurbondarchuk/consumer-maintenance-system/internal/consumer/db"
-	"github.com/myurbondarchuk/consumer-maintenance-system/internal/marketplace"
-	marketplacedb "github.com/myurbondarchuk/consumer-maintenance-system/internal/marketplace/db"
-	"github.com/myurbondarchuk/consumer-maintenance-system/internal/meter"
-	meterdb "github.com/myurbondarchuk/consumer-maintenance-system/internal/meter/db"
-	"github.com/myurbondarchuk/consumer-maintenance-system/internal/notification"
-	notificationdb "github.com/myurbondarchuk/consumer-maintenance-system/internal/notification/db"
-	"github.com/myurbondarchuk/consumer-maintenance-system/internal/organization"
-	orgdb "github.com/myurbondarchuk/consumer-maintenance-system/internal/organization/db"
+	"github.com/myurbondarchuk/consumer-maintenance-system/internal/catalog"
+	catalogdb "github.com/myurbondarchuk/consumer-maintenance-system/internal/catalog/db"
+	"github.com/myurbondarchuk/consumer-maintenance-system/internal/chat"
+	chatdb "github.com/myurbondarchuk/consumer-maintenance-system/internal/chat/db"
+	"github.com/myurbondarchuk/consumer-maintenance-system/internal/master"
+	masterdb "github.com/myurbondarchuk/consumer-maintenance-system/internal/master/db"
+	"github.com/myurbondarchuk/consumer-maintenance-system/internal/payment"
+	paymentdb "github.com/myurbondarchuk/consumer-maintenance-system/internal/payment/db"
 	platformauth "github.com/myurbondarchuk/consumer-maintenance-system/internal/platform/auth"
 	"github.com/myurbondarchuk/consumer-maintenance-system/internal/platform/broker"
 	"github.com/myurbondarchuk/consumer-maintenance-system/internal/platform/config"
 	platformdb "github.com/myurbondarchuk/consumer-maintenance-system/internal/platform/db"
 	"github.com/myurbondarchuk/consumer-maintenance-system/internal/platform/wiring"
-	"github.com/myurbondarchuk/consumer-maintenance-system/internal/photo"
-	photodb "github.com/myurbondarchuk/consumer-maintenance-system/internal/photo/db"
+	"github.com/myurbondarchuk/consumer-maintenance-system/internal/request"
+	requestdb "github.com/myurbondarchuk/consumer-maintenance-system/internal/request/db"
+	"github.com/myurbondarchuk/consumer-maintenance-system/internal/review"
+	reviewdb "github.com/myurbondarchuk/consumer-maintenance-system/internal/review/db"
 	"github.com/myurbondarchuk/consumer-maintenance-system/internal/server"
-	"github.com/myurbondarchuk/consumer-maintenance-system/internal/task"
-	taskdb "github.com/myurbondarchuk/consumer-maintenance-system/internal/task/db"
 )
 
 func main() {
@@ -62,102 +56,62 @@ func main() {
 		os.Exit(1) //nolint:gocritic // fatal startup error; process exit reclaims the pool anyway
 	}
 
-	// --- organization (platform tenant management) ---
-	orgRepo := organization.NewRepository(orgdb.New(pool))
-	orgService := organization.NewService(orgRepo)
-	orgHandler := organization.NewHandler(orgService)
-
-	// --- auth ---
+	// --- auth (foundational, no dependencies on other domains) ---
 	authRepo := auth.NewRepository(authdb.New(pool))
-	authService := auth.NewService(
-		authRepo,
-		wiring.NewTenantAdapter(orgRepo),
-		tokenService,
-		wiring.NewTxRunnerAdapter(txManager),
-	)
+	authService := auth.NewService(authRepo, tokenService)
 	authHandler := auth.NewHandler(authService)
 
-	// --- consumer ---
-	consumerRepo := consumer.NewRepository(consumerdb.New(pool))
-	consumerService := consumer.NewService(consumerRepo)
-	consumerHandler := consumer.NewHandler(consumerService)
+	// --- catalog (categories + services, no dependencies) ---
+	catalogRepo := catalog.NewRepository(catalogdb.New(pool))
+	catalogService := catalog.NewService(catalogRepo)
+	catalogHandler := catalog.NewHandler(catalogService)
+	catalogAdapter := wiring.NewCatalogAdapter(catalogService)
 
-	// --- address ---
-	addressRepo := address.NewRepository(addressdb.New(pool))
-	addressService := address.NewService(addressRepo, wiring.NewConsumerAdapter(consumerService))
-	addressHandler := address.NewHandler(addressService)
+	// --- master (profiles + specializations, depends on catalog) ---
+	masterRepo := master.NewRepository(masterdb.New(pool))
+	masterService := master.NewService(masterRepo, catalogAdapter)
+	masterHandler := master.NewHandler(masterService)
+	masterAdapter := wiring.NewMasterAdapter(masterService)
 
-	// actRef breaks the act <-> {task, meter, photo} construction cycle: it
-	// is handed out now and populated once act.Service exists below, before
-	// the HTTP server starts accepting requests.
-	actRef := &wiring.ActRef{}
-
-	// --- meter ---
-	meterRepo := meter.NewRepository(meterdb.New(pool))
-	meterService := meter.NewService(meterRepo, actRef)
-	meterHandler := meter.NewHandler(meterService)
-
-	// --- photo ---
-	photoRepo := photo.NewRepository(photodb.New(pool))
-	photoService := photo.NewService(photoRepo, actRef, cfg.FileUploadDir)
-	photoHandler := photo.NewHandler(photoService)
-
-	// --- events ---
+	// --- events (request -> payment cross-domain effects) ---
 	eventBus := broker.NewBus(logger)
 
-	// --- task ---
-	taskRepo := task.NewRepository(taskdb.New(pool))
-	taskService := task.NewService(
-		taskRepo,
-		wiring.NewTaskAddressAdapter(addressService),
-		wiring.NewTaskUserAdapter(authService),
-		actRef,
-		eventBus,
-	)
-	taskHandler := task.NewHandler(taskService)
+	// --- request (service_requests + offers + history + favorites,
+	// depends on catalog and master) ---
+	requestRepo := request.NewRepository(requestdb.New(pool))
+	requestService := request.NewService(requestRepo, catalogAdapter, masterAdapter, wiring.NewTxRunnerAdapter(txManager), eventBus)
+	requestHandler := request.NewHandler(requestService)
+	requestAdapter := wiring.NewRequestAdapter(requestService)
 
-	// --- act ---
-	actRepo := act.NewRepository(actdb.New(pool))
-	actService := act.NewService(
-		actRepo,
-		wiring.NewActTaskAdapter(taskService),
-		wiring.NewActAddressAdapter(addressService),
-		wiring.NewActConsumerAdapter(consumerService),
-		wiring.NewActMeterAdapter(meterService),
-		wiring.NewActPhotoAdapter(photoService),
-		wiring.NewActUserAdapter(authService),
-		wiring.NewActTenantAdapter(orgRepo),
-	)
-	actHandler := act.NewHandler(actService)
-	actRef.Set(actService)
+	// --- review (depends on request and master) ---
+	reviewRepo := review.NewRepository(reviewdb.New(pool))
+	reviewService := review.NewService(reviewRepo, requestAdapter, masterAdapter)
+	reviewHandler := review.NewHandler(reviewService)
 
-	// --- notification ---
-	notificationRepo := notification.NewRepository(notificationdb.New(pool))
-	notificationService := notification.NewService(notificationRepo, authService)
-	notificationService.RegisterHandlers(eventBus)
-	notificationHandler := notification.NewHandler(notificationService)
+	// --- payment (event-driven off the request lifecycle, depends on
+	// request only for the read-side participant check) ---
+	paymentRepo := payment.NewRepository(paymentdb.New(pool))
+	paymentService := payment.NewService(paymentRepo, requestAdapter)
+	paymentService.RegisterHandlers(eventBus)
+	paymentHandler := payment.NewHandler(paymentService)
 
-	// --- marketplace (platform-level, not tenant-scoped: client requests,
-	// masters claim from the open pool) ---
-	marketplaceRepo := marketplace.NewRepository(marketplacedb.New(pool))
-	marketplaceService := marketplace.NewService(marketplaceRepo, wiring.NewMarketplaceUserAdapter(authService))
-	marketplaceHandler := marketplace.NewHandler(marketplaceService)
+	// --- chat (depends on request for participant/assignment checks) ---
+	chatRepo := chat.NewRepository(chatdb.New(pool))
+	chatService := chat.NewService(chatRepo, requestAdapter)
+	chatHandler := chat.NewHandler(chatService)
 
 	router := server.NewRouter(server.Dependencies{
-		Logger:              logger,
-		Pool:                pool,
-		TokenService:        tokenService,
-		AuthHandler:         authHandler,
-		OrgHandler:          orgHandler,
-		ConsumerHandler:     consumerHandler,
-		AddressHandler:      addressHandler,
-		TaskHandler:         taskHandler,
-		ActHandler:          actHandler,
-		MeterHandler:        meterHandler,
-		PhotoHandler:        photoHandler,
-		NotificationHandler: notificationHandler,
-		MarketplaceHandler:  marketplaceHandler,
-		CORSOrigins:         cfg.CORSAllowedOrigins,
+		Logger:         logger,
+		Pool:           pool,
+		TokenService:   tokenService,
+		AuthHandler:    authHandler,
+		CatalogHandler: catalogHandler,
+		MasterHandler:  masterHandler,
+		RequestHandler: requestHandler,
+		ReviewHandler:  reviewHandler,
+		PaymentHandler: paymentHandler,
+		ChatHandler:    chatHandler,
+		CORSOrigins:    cfg.CORSAllowedOrigins,
 	})
 
 	httpServer := &http.Server{

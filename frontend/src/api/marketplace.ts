@@ -1,62 +1,118 @@
 import { api } from './client'
-import type { CategoryDTO, MasterProfileDTO, Page, RequestDTO, RequestStatus, ServiceDTO } from '@/types'
+import type {
+  CategoryDTO,
+  ServiceDTO,
+  ProfileDTO,
+  RequestDTO,
+  OfferDTO,
+  FavoriteDTO,
+  ReviewDTO,
+  PaymentDTO,
+  MessageDTO,
+  Page,
+} from '@/types'
 
-export interface CreateRequestRequest {
-  serviceId: number
-  description: string
-  addressText: string
-  latitude?: number
-  longitude?: number
-}
-
-export interface RequestListParams {
-  page?: number
-  pageSize?: number
-}
-
-export interface UpdateMasterProfileRequest {
-  city: string
-  bio: string
-  specializationIds: number[]
-}
-
-export const marketplaceApi = {
-  listCategories: () => api.get<CategoryDTO[]>('/marketplace/categories').then((r) => r.data),
+export const catalogApi = {
+  listCategories: () => api.get<CategoryDTO[]>('/catalog/categories').then((r) => r.data),
   listServices: (categoryId?: number) =>
     api
-      .get<ServiceDTO[]>('/marketplace/services', { params: categoryId ? { categoryId } : {} })
+      .get<ServiceDTO[]>('/catalog/services', { params: categoryId ? { categoryId } : undefined })
       .then((r) => r.data),
-
-  createRequest: (req: CreateRequestRequest) =>
-    api.post<RequestDTO>('/marketplace/requests', req).then((r) => r.data),
-  listMyRequests: (params: RequestListParams = {}) =>
-    api.get<Page<RequestDTO>>('/marketplace/requests', { params }).then((r) => r.data),
-  listOpenRequests: (params: RequestListParams = {}) =>
-    api.get<Page<RequestDTO>>('/marketplace/requests/open', { params }).then((r) => r.data),
-  getRequest: (id: number) => api.get<RequestDTO>(`/marketplace/requests/${id}`).then((r) => r.data),
-  claimRequest: (id: number) => api.post<RequestDTO>(`/marketplace/requests/${id}/claim`).then((r) => r.data),
-  completeRequest: (id: number) =>
-    api.post<RequestDTO>(`/marketplace/requests/${id}/complete`).then((r) => r.data),
-  cancelRequest: (id: number, reason: string) =>
-    api.post<RequestDTO>(`/marketplace/requests/${id}/cancel`, { reason }).then((r) => r.data),
-
-  getMasterProfile: () => api.get<MasterProfileDTO>('/marketplace/master/profile').then((r) => r.data),
-  updateMasterProfile: (req: UpdateMasterProfileRequest) =>
-    api.put<MasterProfileDTO>('/marketplace/master/profile', req).then((r) => r.data),
+  createCategory: (body: { name: string; parentCategoryId?: number }) =>
+    api.post<CategoryDTO>('/admin/categories', body).then((r) => r.data),
+  updateCategory: (id: number, body: { name: string; active: boolean }) =>
+    api.put<CategoryDTO>(`/admin/categories/${id}`, body).then((r) => r.data),
+  createService: (body: {
+    categoryId: number
+    name: string
+    description?: string
+    priceFrom?: number
+    priceTo?: number
+    unit?: string
+  }) => api.post<ServiceDTO>('/admin/services', body).then((r) => r.data),
+  updateService: (
+    id: number,
+    body: {
+      name: string
+      description?: string
+      priceFrom?: number
+      priceTo?: number
+      unit?: string
+      active: boolean
+    },
+  ) => api.put<ServiceDTO>(`/admin/services/${id}`, body).then((r) => r.data),
 }
 
-export const requestStatusLabels: Record<RequestStatus, string> = {
-  OPEN: 'Открыта',
-  IN_PROGRESS: 'В работе',
-  COMPLETED: 'Выполнена',
-  CANCELED: 'Отменена',
+export const masterApi = {
+  getProfile: () => api.get<ProfileDTO>('/master/profile').then((r) => r.data),
+  updateProfile: (body: { city: string; bio: string; specializationIds: number[] }) =>
+    api.put<ProfileDTO>('/master/profile', body).then((r) => r.data),
+  listReviews: (masterId: number, page = 1, pageSize = 20) =>
+    api
+      .get<Page<ReviewDTO>>(`/masters/${masterId}/reviews`, { params: { page, pageSize } })
+      .then((r) => r.data),
 }
 
-// "Мастерская" badge tones for the marketplace's own screens (indigo accent,
-// not the admin's brass) — see MarketplaceLandingView.vue for the palette.
-export const requestStatusStyles: Record<RequestStatus, { bg: string; fg: string }> = {
-  OPEN: { bg: '#EFEBE1', fg: '#55524A' },
-  IN_PROGRESS: { bg: '#E7E3FC', fg: '#5B4BE0' },
-  COMPLETED: { bg: 'oklch(0.94 0.04 145)', fg: 'oklch(0.42 0.1 145)' },
-  CANCELED: { bg: 'oklch(0.95 0.03 25)', fg: '#B3261E' },
+export const requestsApi = {
+  create: (body: {
+    serviceId: number
+    description: string
+    addressText: string
+    latitude?: number
+    longitude?: number
+  }) => api.post<RequestDTO>('/requests', body).then((r) => r.data),
+  listMine: (page = 1, pageSize = 20) =>
+    api.get<Page<RequestDTO>>('/requests', { params: { page, pageSize } }).then((r) => r.data),
+  listOpen: (page = 1, pageSize = 20) =>
+    api
+      .get<Page<RequestDTO>>('/requests/open', { params: { page, pageSize } })
+      .then((r) => r.data),
+  get: (id: number) => api.get<RequestDTO>(`/requests/${id}`).then((r) => r.data),
+  cancel: (id: number, reason: string) =>
+    api.post<RequestDTO>(`/requests/${id}/cancel`, { reason }).then((r) => r.data),
+  complete: (id: number) => api.post<RequestDTO>(`/requests/${id}/complete`).then((r) => r.data),
+  listOffers: (id: number) => api.get<OfferDTO[]>(`/requests/${id}/offers`).then((r) => r.data),
+  submitOffer: (id: number, body: { price: number; comment?: string }) =>
+    api.post<OfferDTO>(`/requests/${id}/offers`, body).then((r) => r.data),
+  acceptOffer: (id: number, offerId: number) =>
+    api.post<RequestDTO>(`/requests/${id}/offers/${offerId}/accept`).then((r) => r.data),
+  listFavorites: () => api.get<FavoriteDTO[]>('/requests/favorites').then((r) => r.data),
+  addFavorite: (masterId: number) =>
+    api.post<FavoriteDTO>('/requests/favorites', { masterId }).then((r) => r.data),
+  removeFavorite: (masterId: number) => api.delete(`/requests/favorites/${masterId}`),
+}
+
+export const reviewsApi = {
+  create: (body: { requestId: number; rating: number; comment?: string }) =>
+    api.post<ReviewDTO>('/reviews', body).then((r) => r.data),
+}
+
+export const paymentsApi = {
+  getForRequest: (requestId: number) =>
+    api.get<PaymentDTO>(`/requests/${requestId}/payment`).then((r) => r.data),
+}
+
+export const chatApi = {
+  listMessages: (requestId: number, sinceId?: number) =>
+    api
+      .get<MessageDTO[]>(`/requests/${requestId}/messages`, {
+        params: sinceId ? { sinceId } : undefined,
+      })
+      .then((r) => r.data),
+  send: (requestId: number, text: string) =>
+    api.post<MessageDTO>(`/requests/${requestId}/messages`, { text }).then((r) => r.data),
+}
+
+export const adminApi = {
+  listMasters: (page = 1, pageSize = 20) =>
+    api.get<Page<ProfileDTO>>('/admin/masters', { params: { page, pageSize } }).then((r) => r.data),
+  listRequests: (status?: string, page = 1, pageSize = 20) =>
+    api
+      .get<Page<RequestDTO>>('/admin/requests', { params: { status, page, pageSize } })
+      .then((r) => r.data),
+  hideReview: (id: number) => api.put(`/admin/reviews/${id}/hide`),
+  listPayments: (page = 1, pageSize = 20) =>
+    api
+      .get<Page<PaymentDTO>>('/admin/payments', { params: { page, pageSize } })
+      .then((r) => r.data),
 }
