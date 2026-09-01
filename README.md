@@ -1,17 +1,19 @@
-# Consumer Maintenance System
+# Consumer Maintenance System — маркетплейс бытовых услуг
 
-Production-grade система выездного обслуживания приборов учёта (счётчиков).
-Диспетчер создаёт наряды на осмотр или замену счётчика, инспектор выполняет
-их с мобильного/веб-интерфейса, система формирует юридически значимые PDF-акты
-с фотофиксацией. Бэкенд — Go (модульный монолит, ports & adapters), админка —
-Vue 3.
+Маркетплейс в духе Профи.ру/YouDo: клиент публикует заявку на услугу,
+свободные мастера откликаются с ценой (bidding), клиент выбирает
+исполнителя. Бэкенд — Go (модульный монолит, ports & adapters, 6 доменов),
+фронт — Vue 3 (публичный сайт + встроенная админ-панель), мобильный клиент
+мастера — Android.
 
 ## Стек
 
 - **Backend**: Go, chi (роутер), PostgreSQL + pgx, sqlc (типобезопасный SQL),
   golang-migrate (миграции), golang-jwt (access + refresh), slog (логи),
-  Prometheus (метрики), signintech/gopdf (генерация PDF-актов с кириллицей).
+  Prometheus (метрики).
 - **Frontend**: Vue 3 + Vite + TypeScript + Pinia + Tailwind CSS + Axios.
+- **Android**: Kotlin, Retrofit2 + OkHttp4 + Gson, coroutines, Navigation
+  Component (роль MASTER — клиентская роль веб-only).
 - **Инфраструктура**: Docker, docker-compose.
 
 ## Архитектура
@@ -20,32 +22,26 @@ Vue 3.
 `handler → service → repository`, с собственными `models.go`/`dto.go` и,
 где нужно, `ports.go` — интерфейсами к соседним доменам. Реализации портов
 связываются только в `cmd/api/main.go` (composition root); домены не
-импортируют друг друга напрямую. Кросс-доменные эффекты (например, «наряд
-назначен» → уведомление) идут через `internal/platform/broker` — простой
-in-process pub/sub, который в будущем можно заменить на настоящую очередь без
-изменений в доменном коде.
+импортируют друг друга напрямую. Кросс-доменные эффекты (например,
+«оффер принят» → «создать эскроу-платёж») идут через
+`internal/platform/broker` — простой in-process pub/sub.
 
-Домены: `auth` (пользователи/роли/JWT), `organization` (SaaS-тенанты,
-`/api/platform/tenants`), `consumer` (клиенты-потребители — юрлица/адреса,
-таблица `organizations`), `address`, `meter`, `task` (наряды и жизненный
-цикл), `act` (акты осмотра и замены + PDF), `photo` (фотофиксация),
-`notification` (in-app уведомления).
+Домены: `auth` (пользователи/роли/JWT), `catalog` (категории с
+подкатегориями, услуги), `master` (профиль и специализация мастера,
+рейтинг), `request` (заявки, торги/отклики, история статусов, избранное),
+`review` (отзывы, денормализованный рейтинг мастера), `payment`
+(эскроу-симуляция: HELD → RELEASED/REFUNDED), `chat` (переписка внутри
+заявки).
 
-Роли: `SUPER_ADMIN` (платформа), `TENANT_ADMIN` (управляет сотрудниками и
-справочниками своей компании), `DISPATCHER` (создаёт и назначает наряды),
-`ELECTRICIAN` (инспектор, выполняет наряды и заполняет акты).
+Роли: `SUPER_ADMIN` (каталог, модерация), `CLIENT` (публикует заявки),
+`MASTER` (откликается, выполняет). Без мультитенантности — платформенный
+уровень, `tenant_id` в схеме нет.
 
-## Маркетплейс услуг (второй контур, в разработке)
-
-Поверх B2B-системы (тенанты, диспетчер → инспектор) разрабатывается
-независимый B2C-маркетплейс в духе Профи.ру: клиент оформляет заявку на
-услугу, свободные мастера сами откликаются, клиент выбирает исполнителя.
-Платформенный уровень, не привязан к тенантам (`tenant_id = NULL`, как у
-`SUPER_ADMIN`). Домен `internal/marketplace`, роли `CLIENT`/`MASTER`,
-публичные роуты `/marketplace/*` во фронтенде (`MarketplaceShell.vue`,
-отдельная от B2B визуальная идентичность). B2B и маркетплейс сосуществуют
-как два независимых контура одного продукта — этот раздел будет обновлён,
-когда контур стабилизируется.
+Жизненный цикл заявки: `OPEN` (принимает отклики от мастеров с подходящей
+специализацией — проверка на сервере) → клиент выбирает оффер → `ASSIGNED`
+(эскроу `HELD`) → мастер выполняет → `COMPLETED` (эскроу `RELEASED`, можно
+оставить отзыв) либо `CANCELED` с любого нетерминального статуса
+(`REFUNDED`).
 
 ## Быстрый запуск
 
@@ -54,29 +50,30 @@ in-process pub/sub, который в будущем можно заменить
 ```bash
 cp .env.example .env
 # впиши JWT_SECRET, например: openssl rand -base64 32
-make docker-up
+docker compose up --build -d
 ```
 
-Поднимает Postgres → применяет миграции (`migrate`) → заполняет базу демо-данными
-(`seed`) → стартует API (`app`, `http://localhost:8080`) → стартует собранный
-фронтенд за nginx (`frontend`, **`http://localhost:5173`**). Остановить:
-`make docker-down`. Пересобрать с нуля (чистый volume БД): `make docker-fresh`.
+Поднимает Postgres → применяет миграции (`migrate`) → заполняет базу
+демо-данными (`seed`) → стартует API (`app`, `http://localhost:8080`) →
+стартует фронтенд за nginx (`frontend`, **`http://localhost:5173`**).
+Остановить: `docker compose down`. Пересобрать с нуля (чистый volume БД,
+**обязательно** после смены схемы миграций): `docker compose down -v &&
+docker compose up --build -d`.
 
-`seed` идемпотентен — при повторном запуске (`docker compose up` без `-v`)
-данные не дублируются, он просто пропускает шаг, если демо-тенант уже есть.
+`seed` идемпотентен — при повторном запуске без `-v` данные не дублируются.
 
-**Тестовый вход** (после `make docker-up` открой `http://localhost:5173`):
+**Тестовый вход** (после запуска открой `http://localhost:5173`), пароль
+один на всех — `Demo12345`:
 
-| Роль | Логин | Пароль | Код компании |
-|---|---|---|---|
-| Администратор | `admin` | `Demo12345` | `demo` |
-| Диспетчер | `dispatcher` | `Demo12345` | `demo` |
-| Инспектор (для справки, веб не используется) | `inspector1` / `inspector2` | `Demo12345` | `demo` |
+| Роль | Логины |
+|---|---|
+| Администратор платформы | `admin` |
+| Мастер | `master1` … `master10` (разные специализации по всем категориям каталога) |
+| Клиент | `client1` … `client12` |
 
-В демо-данных: 4 потребителя, 6 адресов, 7 нарядов во всех статусах (ожидает
-без инспектора / ожидает с инспектором / в работе / выполнен ×2 с заполненным
-актом, счётчиком и фото / отменён с причиной) — готово к осмотру сразу после
-логина.
+Сид создаёт полный каталог, 64 заявки во всех статусах с офферами/отзывами/
+платежами/чатом, даты разбросаны за последние ~30 дней — сервис выглядит
+так, будто уже работает месяц.
 
 ### Локально без Docker
 
@@ -110,7 +107,6 @@ Vite-сервер на `http://localhost:5173` уже настроен на пр
 | `JWT_SECRET` | секрет подписи JWT — **обязателен**, без дефолта |
 | `JWT_ACCESS_TTL_MINUTES` / `JWT_REFRESH_TTL_DAYS` | время жизни токенов |
 | `CORS_ALLOWED_ORIGINS` | список разрешённых origin через запятую |
-| `FILE_UPLOAD_DIR` | директория для загруженных фото |
 
 Секреты никогда не коммитятся — `.env` в `.gitignore`, в репозитории только
 `.env.example`.
@@ -127,10 +123,11 @@ Vite-сервер на `http://localhost:5173` уже настроен на пр
 
 ## Миграции
 
-`migrations/` (golang-migrate, `up`/`down` пары). Схема: `tenants`, `users`,
-`organizations` (клиенты-потребители), `addresses`, `tasks`,
-`inspection_acts`, `replacement_acts`, `meters`, `photos`,
-`refresh_tokens`, `notifications`.
+Одна чистая миграция `migrations/000001_init.{up,down}.sql` — 13 таблиц:
+`users`, `refresh_tokens`, `service_categories`, `services`,
+`master_profiles`, `master_specializations`, `service_requests`,
+`request_offers`, `request_status_history`, `favorites`, `reviews`,
+`payments`, `messages`.
 
 ## Генерация кода из SQL
 
@@ -141,23 +138,16 @@ Vite-сервер на `http://localhost:5173` уже настроен на пр
 make generate
 ```
 
-## PDF-акты
-
-`internal/act/pdf.go` рендерит акт осмотра/замены в PDF (`signintech/gopdf`)
-с встроенным кириллическим шрифтом (DejaVu Sans, `internal/act/assets/fonts`),
-таблицей приборов учёта и вложенными фотографиями. Эндпоинты:
-`GET /api/acts/inspection/{id}/pdf`, `GET /api/acts/replacement/{id}/pdf`.
-
 ## Структура репозитория
 
 ```
-cmd/api/main.go            # composition root
-internal/<domain>/         # auth, organization, consumer, address, meter,
-                            # task, act, photo, notification
-internal/platform/         # auth (jwt), db, broker, httpx, middleware,
-                            # observability, config, wiring (adapters)
-internal/server/router.go  # маршрутизация
+cmd/api/main.go             # composition root
+cmd/seed/main.go            # демо-данные (каталог, мастера, клиенты, заявки)
+internal/<domain>/          # auth, catalog, master, request, review, payment, chat
+internal/platform/          # auth (jwt), db, broker, httpx, middleware,
+                             # observability, config, wiring (adapters)
+internal/server/router.go   # маршрутизация
 migrations/                 # golang-migrate
 sql/<domain>/*.sql          # sqlc-запросы
-frontend/                   # Vue 3 + Vite админка
+frontend/                   # Vue 3 + Vite — публичный сайт + админка
 ```
