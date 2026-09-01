@@ -27,6 +27,8 @@ import (
 	authdb "github.com/myurbondarchuk/consumer-maintenance-system/internal/auth/db"
 	"github.com/myurbondarchuk/consumer-maintenance-system/internal/consumer"
 	consumerdb "github.com/myurbondarchuk/consumer-maintenance-system/internal/consumer/db"
+	"github.com/myurbondarchuk/consumer-maintenance-system/internal/marketplace"
+	marketplacedb "github.com/myurbondarchuk/consumer-maintenance-system/internal/marketplace/db"
 	"github.com/myurbondarchuk/consumer-maintenance-system/internal/meter"
 	meterdb "github.com/myurbondarchuk/consumer-maintenance-system/internal/meter/db"
 	"github.com/myurbondarchuk/consumer-maintenance-system/internal/notification"
@@ -115,32 +117,46 @@ func main() {
 	notificationService := notification.NewService(notificationRepo, authService)
 	notificationService.RegisterHandlers(eventBus)
 
-	if _, err := orgRepo.GetByCode(ctx, tenantCode); err == nil {
-		logger.Info("demo tenant already exists, skipping seed", "tenantCode", tenantCode)
-		return
-	}
+	marketplaceRepo := marketplace.NewRepository(marketplacedb.New(pool))
+	marketplaceService := marketplace.NewService(marketplaceRepo, wiring.NewMarketplaceUserAdapter(authService))
 
 	s := &seeder{
 		ctx: ctx, logger: logger,
 		auth: authService, consumers: consumerService, addresses: addressService,
 		tasks: taskService, acts: actService, meters: meterService, photos: photoService,
+		marketplace: marketplaceService,
 	}
-	if err := s.run(); err != nil {
-		logger.Error("seed failed", "error", err)
+
+	// The B2B (tenant) seed and the marketplace seed are gated
+	// independently -- they're unrelated data sets, and a database that
+	// already has the demo tenant from an earlier `docker compose up` (B2B
+	// seeding is one-shot) must still get marketplace data seeded the first
+	// time marketplace migrations/seed code lands, without re-running (or
+	// erroring on) the B2B part.
+	if _, err := orgRepo.GetByCode(ctx, tenantCode); err == nil {
+		logger.Info("demo tenant already exists, skipping B2B seed", "tenantCode", tenantCode)
+	} else if err := s.run(); err != nil {
+		logger.Error("B2B seed failed", "error", err)
+		os.Exit(1)
+	}
+
+	if err := s.seedMarketplace(); err != nil {
+		logger.Error("marketplace seed failed", "error", err)
 		os.Exit(1)
 	}
 }
 
 type seeder struct {
-	ctx       context.Context
-	logger    *slog.Logger
-	auth      *auth.Service
-	consumers *consumer.Service
-	addresses *address.Service
-	tasks     *task.Service
-	acts      *act.Service
-	meters    *meter.Service
-	photos    *photo.Service
+	ctx         context.Context
+	logger      *slog.Logger
+	auth        *auth.Service
+	consumers   *consumer.Service
+	addresses   *address.Service
+	tasks       *task.Service
+	acts        *act.Service
+	meters      *meter.Service
+	photos      *photo.Service
+	marketplace *marketplace.Service
 }
 
 func (s *seeder) run() error {
@@ -279,6 +295,231 @@ func (s *seeder) run() error {
 
 	s.logger.Info("seed complete", "tenantCode", tenantCode)
 	s.logger.Info("login with", "tenantCode", tenantCode, "username", "admin/dispatcher/inspector1/inspector2", "password", password)
+	return nil
+}
+
+type serviceSeed struct {
+	name        string
+	description string
+}
+
+type categorySeed struct {
+	name     string
+	services []serviceSeed
+}
+
+// marketplaceCatalog is a broad, realistic catalog spanning the kind of
+// activities an actual home-services marketplace covers -- not just the
+// meter-maintenance niche the B2B side is built around. Deliberately a data
+// table, not ~80 individual CreateService calls, so it stays readable.
+var marketplaceCatalog = []categorySeed{
+	{name: "Приборы учёта", services: []serviceSeed{
+		{"Осмотр счётчика", "Плановый осмотр прибора учёта"},
+		{"Замена счётчика", "Замена прибора учёта на новый"},
+		{"Поверка счётчика", "Проверка точности показаний"},
+		{"Опломбировка счётчика", "Установка контрольной пломбы"},
+		{"Установка нового счётчика", "Монтаж прибора учёта с нуля"},
+	}},
+	{name: "Сантехника", services: []serviceSeed{
+		{"Устранение течи", "Устранение течи в трубах или сантехнике"},
+		{"Установка смесителя", "Замена или монтаж смесителя"},
+		{"Установка унитаза", "Демонтаж старого, монтаж нового"},
+		{"Прочистка канализации", "Устранение засора"},
+		{"Замена труб", "Замена водопроводных или канализационных труб"},
+		{"Установка водонагревателя", "Монтаж и подключение бойлера"},
+		{"Монтаж полотенцесушителя", "Установка и подключение"},
+		{"Подключение стиральной машины", "Подключение к воде и канализации"},
+	}},
+	{name: "Электрика", services: []serviceSeed{
+		{"Замена проводки", "Полная или частичная замена электропроводки"},
+		{"Установка розетки", "Монтаж новой розетки или блока розеток"},
+		{"Установка люстры", "Монтаж и подключение светильника"},
+		{"Монтаж электрощита", "Сборка и установка распределительного щита"},
+		{"Подключение бытовой техники", "Электромонтаж под конкретный прибор"},
+		{"Устранение короткого замыкания", "Поиск и устранение неисправности"},
+		{"Установка автоматов", "Замена автоматических выключателей"},
+	}},
+	{name: "Клининг", services: []serviceSeed{
+		{"Генеральная уборка квартиры", "Полная уборка всех помещений"},
+		{"Уборка после ремонта", "Удаление строительной пыли и мусора"},
+		{"Химчистка дивана", "Чистка обивки на месте"},
+		{"Мытьё окон", "Мытьё окон и рам, включая труднодоступные"},
+		{"Уборка офиса", "Регулярная или разовая уборка помещений"},
+		{"Химчистка ковров", "Чистка ковров и паласов на месте"},
+	}},
+	{name: "Бытовая техника", services: []serviceSeed{
+		{"Ремонт стиральной машины", "Диагностика и ремонт на месте"},
+		{"Ремонт холодильника", "Диагностика и ремонт на месте"},
+		{"Ремонт посудомоечной машины", "Диагностика и ремонт на месте"},
+		{"Ремонт микроволновки", "Диагностика и ремонт"},
+		{"Ремонт кондиционера", "Диагностика и устранение неисправности"},
+		{"Установка кондиционера", "Монтаж внутреннего и внешнего блоков"},
+	}},
+	{name: "Мебель", services: []serviceSeed{
+		{"Сборка шкафа", "Сборка корпусной мебели"},
+		{"Сборка кухни", "Сборка и монтаж кухонного гарнитура"},
+		{"Сборка кровати", "Сборка кровати любой сложности"},
+		{"Разборка мебели при переезде", "Аккуратная разборка для транспортировки"},
+		{"Мелкий ремонт мебели", "Устранение сколов, замена фурнитуры"},
+	}},
+	{name: "Компьютеры и телефоны", services: []serviceSeed{
+		{"Ремонт ноутбука", "Диагностика и ремонт неисправностей"},
+		{"Настройка компьютера", "Установка ПО, настройка системы"},
+		{"Замена экрана телефона", "Замена дисплея на месте или в мастерской"},
+		{"Установка Windows", "Переустановка операционной системы"},
+		{"Чистка компьютера от пыли", "Профилактическое обслуживание"},
+		{"Настройка Wi-Fi роутера", "Настройка домашней сети"},
+	}},
+	{name: "Ремонт и строительство", services: []serviceSeed{
+		{"Поклейка обоев", "Поклейка обоев любого типа"},
+		{"Укладка плитки", "Укладка кафеля в санузле или на кухне"},
+		{"Покраска стен", "Покраска стен и потолков"},
+		{"Штукатурка стен", "Выравнивание поверхности стен"},
+		{"Укладка ламината", "Укладка напольного покрытия"},
+		{"Монтаж натяжного потолка", "Установка натяжного потолка"},
+		{"Демонтажные работы", "Снос перегородок, демонтаж покрытий"},
+	}},
+	{name: "Авто", services: []serviceSeed{
+		{"Замена масла", "Замена масла и фильтров"},
+		{"Шиномонтаж", "Замена и балансировка колёс"},
+		{"Компьютерная диагностика", "Диагностика систем автомобиля"},
+		{"Мойка авто", "Мойка кузова и салона"},
+		{"Полировка кузова", "Полировка и восстановление лакокрасочного покрытия"},
+	}},
+	{name: "Репетиторство", services: []serviceSeed{
+		{"Математика", "Занятия для школьников и студентов"},
+		{"Английский язык", "Занятия любого уровня"},
+		{"Физика", "Подготовка к экзаменам и контрольным"},
+		{"Подготовка к ЕГЭ", "Комплексная подготовка по выбранным предметам"},
+		{"Программирование", "Основы программирования для начинающих"},
+	}},
+	{name: "Красота и здоровье", services: []serviceSeed{
+		{"Маникюр на дому", "Маникюр с выездом мастера"},
+		{"Массаж", "Массаж на дому"},
+		{"Стрижка на дому", "Мужская и женская стрижка"},
+		{"Визаж", "Дневной или вечерний макияж"},
+	}},
+	{name: "Переезды и грузоперевозки", services: []serviceSeed{
+		{"Квартирный переезд", "Перевозка вещей при переезде"},
+		{"Грузчики", "Погрузочно-разгрузочные работы"},
+		{"Вывоз мусора", "Вывоз строительного и бытового мусора"},
+		{"Перевозка мебели", "Перевозка отдельных предметов мебели"},
+	}},
+	{name: "Няни и уход", services: []serviceSeed{
+		{"Няня на час", "Присмотр за ребёнком на несколько часов"},
+		{"Уход за пожилыми", "Помощь по дому и уход"},
+		{"Выгул собак", "Регулярный выгул домашних животных"},
+		{"Передержка животных", "Временная передержка на время отъезда"},
+	}},
+}
+
+// seedMarketplace populates the platform-level (non-tenant) marketplace flow:
+// a broad catalog, a master specialized in only part of it, a client, and
+// three requests demonstrating the full lifecycle including the hard
+// specialization constraint (a request outside the master's specialization
+// is deliberately left unclaimable by them).
+func (s *seeder) seedMarketplace() error {
+	ctx := s.ctx
+
+	// Idempotency gated independently from the B2B tenant check above --
+	// categories existing is the marketplace's own "already seeded" signal.
+	existing, err := s.marketplace.ListCategories(ctx)
+	if err != nil {
+		return fmt.Errorf("check existing marketplace categories: %w", err)
+	}
+	if len(existing) > 0 {
+		s.logger.Info("marketplace catalog already exists, skipping marketplace seed")
+		return nil
+	}
+
+	masterAuth, err := s.auth.RegisterMaster(ctx, auth.RegisterMarketplaceRequest{
+		Username: "master1", Password: password, FullName: "Виктор Мастеров",
+	})
+	if err != nil {
+		return fmt.Errorf("register demo master: %w", err)
+	}
+	clientAuth, err := s.auth.RegisterClient(ctx, auth.RegisterMarketplaceRequest{
+		Username: "client1", Password: password, FullName: "Ольга Заказчикова",
+	})
+	if err != nil {
+		return fmt.Errorf("register demo client: %w", err)
+	}
+	s.logger.Info("created marketplace demo users", "usernames", []string{"master1", "client1"}, "password", password)
+
+	// serviceIDsByCategory lets the demo-lifecycle code below look up
+	// specific seeded services by category name without hardcoding IDs,
+	// which would break the moment the catalog table above is reordered.
+	serviceIDsByCategory := make(map[string][]int64, len(marketplaceCatalog))
+	totalServices := 0
+	for _, cat := range marketplaceCatalog {
+		category, err := s.marketplace.CreateCategory(ctx, cat.name)
+		if err != nil {
+			return fmt.Errorf("create category %q: %w", cat.name, err)
+		}
+		ids := make([]int64, 0, len(cat.services))
+		for _, svc := range cat.services {
+			created, err := s.marketplace.CreateService(ctx, marketplace.CreateOfferingRequest{
+				CategoryID: category.ID, Name: svc.name, Description: svc.description,
+			})
+			if err != nil {
+				return fmt.Errorf("create service %q: %w", svc.name, err)
+			}
+			ids = append(ids, created.ID)
+			totalServices++
+		}
+		serviceIDsByCategory[cat.name] = ids
+	}
+	s.logger.Info("seeded marketplace catalog", "categories", len(marketplaceCatalog), "services", totalServices)
+
+	meterServiceIDs := serviceIDsByCategory["Приборы учёта"]
+	meterInspectionID, meterReplacementID := meterServiceIDs[0], meterServiceIDs[1]
+	plumbingLeakID := serviceIDsByCategory["Сантехника"][0]
+
+	// master1 is specialized only in meter services -- deliberately NOT in
+	// plumbing, so the plumbing request below stays unclaimable by them,
+	// demonstrating the server-side specialization constraint.
+	if _, err := s.marketplace.UpdateMasterProfile(ctx, masterAuth.UserID, marketplace.UpdateMasterProfileRequest{
+		City:              "Самара",
+		Bio:               "10 лет опыта обслуживания приборов учёта",
+		SpecializationIDs: []int64{meterInspectionID, meterReplacementID},
+	}); err != nil {
+		return fmt.Errorf("update master profile: %w", err)
+	}
+
+	// Open request the seeded master CAN claim.
+	openMeterRequest, err := s.marketplace.CreateRequest(ctx, clientAuth.UserID, marketplace.CreateRequestRequest{
+		ServiceID: meterInspectionID, Description: "Счётчик мигает, подозрение на неисправность",
+		AddressText: "г. Самара, ул. Ленина, д. 10, кв. 5",
+	})
+	if err != nil {
+		return fmt.Errorf("create open meter request: %w", err)
+	}
+
+	// Open request the seeded master CANNOT claim (wrong specialization) --
+	// stays in the pool, visible in the DB as a demo of the hard constraint.
+	if _, err := s.marketplace.CreateRequest(ctx, clientAuth.UserID, marketplace.CreateRequestRequest{
+		ServiceID: plumbingLeakID, Description: "Течёт труба под раковиной на кухне",
+		AddressText: "г. Самара, ул. Ленина, д. 10, кв. 5",
+	}); err != nil {
+		return fmt.Errorf("create open plumbing request: %w", err)
+	}
+
+	// Fully completed request: created, claimed, completed.
+	completedRequest, err := s.marketplace.CreateRequest(ctx, clientAuth.UserID, marketplace.CreateRequestRequest{
+		ServiceID: meterReplacementID, Description: "Истёк срок поверки, нужна замена",
+		AddressText: "г. Самара, ул. Гагарина, д. 22, кв. 41",
+	})
+	if err != nil {
+		return fmt.Errorf("create completed request: %w", err)
+	}
+	if _, err := s.marketplace.Claim(ctx, completedRequest.ID, masterAuth.UserID); err != nil {
+		return fmt.Errorf("claim completed request: %w", err)
+	}
+	if _, err := s.marketplace.Complete(ctx, completedRequest.ID, masterAuth.UserID); err != nil {
+		return fmt.Errorf("complete request: %w", err)
+	}
+
+	s.logger.Info("seeded marketplace requests", "openRequestID", openMeterRequest.ID, "completedRequestID", completedRequest.ID)
 	return nil
 }
 

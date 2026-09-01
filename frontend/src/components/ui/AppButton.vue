@@ -15,15 +15,15 @@ withDefaults(
   <button
     :type="type"
     :disabled="disabled || loading"
-    class="inline-flex items-center justify-center gap-2 rounded-md font-medium transition-colors focus-visible:outline-2 disabled:cursor-not-allowed disabled:opacity-50"
+    class="inline-flex items-center justify-center gap-2 font-medium transition-colors focus-visible:outline-2 disabled:cursor-not-allowed disabled:opacity-50"
     :class="[
       size === 'sm' ? 'px-3 py-1.5 text-sm' : 'px-4 py-2 text-sm',
       variant === 'primary' &&
-        'bg-primary text-white hover:bg-[var(--color-primary-hover)] disabled:hover:bg-primary',
+        'notch-corner bg-primary font-semibold tracking-wide text-white hover:bg-[var(--color-primary-hover)] disabled:hover:bg-primary',
       variant === 'secondary' &&
-        'border border-line bg-white text-ink hover:bg-surface dark:border-graphite dark:bg-graphite dark:text-surface dark:hover:bg-ink',
-      variant === 'ghost' && 'text-slate hover:bg-surface dark:text-mist dark:hover:bg-graphite',
-      variant === 'danger' && 'bg-[var(--color-status-canceled)] text-white hover:opacity-90',
+        'rounded-md border border-line bg-white text-ink hover:bg-surface dark:border-graphite dark:bg-graphite dark:text-surface dark:hover:bg-ink',
+      variant === 'ghost' && 'rounded-md text-slate hover:bg-surface dark:text-mist dark:hover:bg-graphite',
+      variant === 'danger' && 'notch-corner bg-[var(--color-status-canceled)] text-white hover:opacity-90',
     ]"
   >
     <svg

@@ -6,6 +6,7 @@ type AuthResponse struct {
 	AccessToken  string  `json:"accessToken"`
 	RefreshToken string  `json:"refreshToken"`
 	ExpiresIn    int64   `json:"expiresIn"`
+	UserID       int64   `json:"userId"`
 	FullName     string  `json:"fullName"`
 	Role         Role    `json:"role"`
 	TenantID     *int64  `json:"tenantId,omitempty"`
@@ -34,6 +35,15 @@ type CompanyRegistrationRequest struct {
 }
 
 type BootstrapSuperAdminRequest struct {
+	Username string `json:"username"`
+	Password string `json:"password"`
+	FullName string `json:"fullName"`
+}
+
+// RegisterMarketplaceRequest is shared by client and master self-registration
+// on the public marketplace — both are platform-level users (no tenant),
+// unlike CompanyRegistrationRequest which also creates a tenant.
+type RegisterMarketplaceRequest struct {
 	Username string `json:"username"`
 	Password string `json:"password"`
 	FullName string `json:"fullName"`

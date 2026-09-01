@@ -1,6 +1,11 @@
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
-import { authApi, type CompanyRegistrationRequest, type LoginRequest } from '@/api/auth'
+import {
+  authApi,
+  type CompanyRegistrationRequest,
+  type LoginRequest,
+  type RegisterMarketplaceRequest,
+} from '@/api/auth'
 import { clearSession, getAccessToken, getRefreshToken, storeSession } from '@/api/client'
 import type { AuthResponse, Role } from '@/types'
 
@@ -73,6 +78,16 @@ export const useAuthStore = defineStore('auth', () => {
     applySession(auth)
   }
 
+  async function registerClient(req: RegisterMarketplaceRequest) {
+    const auth = await authApi.registerClient(req)
+    applySession(auth)
+  }
+
+  async function registerMaster(req: RegisterMarketplaceRequest) {
+    const auth = await authApi.registerMaster(req)
+    applySession(auth)
+  }
+
   async function logout() {
     const refreshToken = getRefreshToken()
     try {
@@ -103,6 +118,8 @@ export const useAuthStore = defineStore('auth', () => {
     applySession,
     login,
     registerCompany,
+    registerClient,
+    registerMaster,
     logout,
   }
 })

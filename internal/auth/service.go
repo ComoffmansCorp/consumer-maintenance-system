@@ -127,6 +127,45 @@ func (s *Service) BootstrapSuperAdmin(ctx context.Context, req BootstrapSuperAdm
 	return s.buildAuthResponse(ctx, user, nil)
 }
 
+// RegisterClient and RegisterMaster create platform-level marketplace users
+// (TenantID == nil, same pattern as SUPER_ADMIN) — unlike RegisterCompany,
+// no tenant is created and there's no "only once" limit; anyone can sign up.
+// Username uniqueness is checked against the platform-user pool (shared with
+// SUPER_ADMIN), matching the existing ux_platform_users_username_lower index.
+func (s *Service) RegisterClient(ctx context.Context, req RegisterMarketplaceRequest) (AuthResponse, error) {
+	return s.registerMarketplaceUser(ctx, req, RoleClient)
+}
+
+func (s *Service) RegisterMaster(ctx context.Context, req RegisterMarketplaceRequest) (AuthResponse, error) {
+	return s.registerMarketplaceUser(ctx, req, RoleMaster)
+}
+
+func (s *Service) registerMarketplaceUser(ctx context.Context, req RegisterMarketplaceRequest, role Role) (AuthResponse, error) {
+	if err := validateMarketplaceRegistration(req); err != nil {
+		return AuthResponse{}, err
+	}
+
+	exists, err := s.repo.ExistsPlatformUser(ctx, req.Username)
+	if err != nil {
+		return AuthResponse{}, err
+	}
+	if exists {
+		return AuthResponse{}, ErrUsernameInUse
+	}
+
+	passwordHash, err := platformauth.HashPassword(req.Password)
+	if err != nil {
+		return AuthResponse{}, err
+	}
+
+	user, err := s.repo.Create(ctx, strings.TrimSpace(req.Username), passwordHash, req.FullName, role, nil)
+	if err != nil {
+		return AuthResponse{}, fmt.Errorf("register marketplace user: %w", err)
+	}
+
+	return s.buildAuthResponse(ctx, user, nil)
+}
+
 func (s *Service) Login(ctx context.Context, req LoginRequest) (AuthResponse, error) {
 	if err := validateLogin(req); err != nil {
 		return AuthResponse{}, err
@@ -344,6 +383,7 @@ func (s *Service) buildAuthResponse(ctx context.Context, user User, tenant *Tena
 		AccessToken:  accessToken,
 		RefreshToken: refreshToken,
 		ExpiresIn:    expiresIn,
+		UserID:       user.ID,
 		FullName:     user.FullName,
 		Role:         user.Role,
 		TenantID:     tenantID,
@@ -374,6 +414,19 @@ func validateRegistration(req CompanyRegistrationRequest) error {
 	}
 	if strings.TrimSpace(req.Username) == "" {
 		return fmt.Errorf("username is required")
+	}
+	if len(req.Password) < 6 || len(req.Password) > 128 {
+		return fmt.Errorf("password length must be between 6 and 128")
+	}
+	return nil
+}
+
+func validateMarketplaceRegistration(req RegisterMarketplaceRequest) error {
+	if strings.TrimSpace(req.Username) == "" {
+		return fmt.Errorf("username is required")
+	}
+	if strings.TrimSpace(req.FullName) == "" {
+		return fmt.Errorf("full name is required")
 	}
 	if len(req.Password) < 6 || len(req.Password) > 128 {
 		return fmt.Errorf("password length must be between 6 and 128")

@@ -6,6 +6,11 @@ declare module 'vue-router' {
   interface RouteMeta {
     public?: boolean
     roles?: Role[]
+    // Separate from `roles`: the admin app (tenant-scoped) and the public
+    // marketplace (platform-level, CLIENT/MASTER) are two different auth
+    // realms that happen to share one Vue app -- an unauthenticated visit
+    // must bounce to the matching login, not the other app's.
+    marketplaceRoles?: Role[]
   }
 }
 
@@ -91,6 +96,45 @@ const router = createRouter({
       name: 'notifications',
       component: () => import('@/views/NotificationsView.vue'),
     },
+    // --- marketplace (public, platform-level: CLIENT posts requests, ---
+    // --- MASTER claims them -- independent of the tenant admin app above) ---
+    {
+      path: '/marketplace',
+      name: 'marketplace',
+      component: () => import('@/views/marketplace/MarketplaceLandingView.vue'),
+      meta: { public: true },
+    },
+    {
+      path: '/marketplace/login',
+      name: 'marketplace-login',
+      component: () => import('@/views/marketplace/MarketplaceLoginView.vue'),
+      meta: { public: true },
+    },
+    {
+      path: '/marketplace/register',
+      name: 'marketplace-register',
+      component: () => import('@/views/marketplace/MarketplaceRegisterView.vue'),
+      meta: { public: true },
+    },
+    {
+      path: '/marketplace/new-request',
+      name: 'marketplace-new-request',
+      component: () => import('@/views/marketplace/MarketplaceNewRequestView.vue'),
+      meta: { marketplaceRoles: ['CLIENT'] },
+    },
+    {
+      path: '/marketplace/my-requests',
+      name: 'marketplace-my-requests',
+      component: () => import('@/views/marketplace/MarketplaceMyRequestsView.vue'),
+      meta: { marketplaceRoles: ['CLIENT'] },
+    },
+    {
+      path: '/marketplace/requests/:id',
+      name: 'marketplace-request-detail',
+      component: () => import('@/views/marketplace/MarketplaceRequestDetailView.vue'),
+      meta: { marketplaceRoles: ['CLIENT'] },
+      props: true,
+    },
     {
       path: '/:pathMatch(.*)*',
       name: 'not-found',
@@ -102,15 +146,24 @@ const router = createRouter({
 
 router.beforeEach((to) => {
   const auth = useAuthStore()
+  const isMarketplaceRoute = to.path.startsWith('/marketplace')
 
   if (!to.meta.public && !auth.isAuthenticated) {
-    return { name: 'login', query: { redirect: to.fullPath } }
+    return isMarketplaceRoute
+      ? { name: 'marketplace-login', query: { redirect: to.fullPath } }
+      : { name: 'login', query: { redirect: to.fullPath } }
   }
-  if (to.meta.public && auth.isAuthenticated && (to.name === 'login' || to.name === 'register-company')) {
-    return { name: 'dashboard' }
+  if (to.meta.public && auth.isAuthenticated) {
+    if (to.name === 'login' || to.name === 'register-company') return { name: 'dashboard' }
+    if (to.name === 'marketplace-login' || to.name === 'marketplace-register') {
+      return { name: 'marketplace-my-requests' }
+    }
   }
   if (to.meta.roles && auth.role && !to.meta.roles.includes(auth.role)) {
     return { name: 'dashboard' }
+  }
+  if (to.meta.marketplaceRoles && auth.role && !to.meta.marketplaceRoles.includes(auth.role)) {
+    return { name: 'marketplace' }
   }
   return true
 })

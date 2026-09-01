@@ -33,15 +33,20 @@ interface NavItem {
   label: string
   to: string
   roles?: string[]
+  icon: string
 }
 
+// One consistent icon per section -- the sidebar was pure text before, which
+// read as an unfinished admin template rather than a considered instrument
+// panel. Same 1.5px-stroke line-icon language as the header's theme/bell
+// icons, just extended to the nav.
 const navItems: NavItem[] = [
-  { label: 'Дашборд', to: '/' },
-  { label: 'Тенанты', to: '/tenants', roles: ['SUPER_ADMIN'] },
-  { label: 'Наряды', to: '/tasks', roles: ['TENANT_ADMIN', 'DISPATCHER'] },
-  { label: 'Потребители', to: '/consumers', roles: ['TENANT_ADMIN', 'DISPATCHER'] },
-  { label: 'Адреса', to: '/addresses', roles: ['TENANT_ADMIN', 'DISPATCHER'] },
-  { label: 'Сотрудники', to: '/users', roles: ['TENANT_ADMIN', 'DISPATCHER'] },
+  { label: 'Дашборд', to: '/', icon: 'grid' },
+  { label: 'Тенанты', to: '/tenants', roles: ['SUPER_ADMIN'], icon: 'building' },
+  { label: 'Наряды', to: '/tasks', roles: ['TENANT_ADMIN', 'DISPATCHER'], icon: 'clipboard' },
+  { label: 'Потребители', to: '/consumers', roles: ['TENANT_ADMIN', 'DISPATCHER'], icon: 'users' },
+  { label: 'Адреса', to: '/addresses', roles: ['TENANT_ADMIN', 'DISPATCHER'], icon: 'pin' },
+  { label: 'Сотрудники', to: '/users', roles: ['TENANT_ADMIN', 'DISPATCHER'], icon: 'badge' },
 ]
 
 function visible(item: NavItem) {
@@ -82,9 +87,40 @@ const roleLabels: Record<string, string> = {
           v-for="item in navItems.filter(visible)"
           :key="item.to"
           :to="item.to"
-          class="block rounded-md border-l-[3px] border-transparent px-3 py-2 text-sm font-medium text-slate hover:bg-surface dark:text-mist dark:hover:bg-ink"
+          class="flex items-center gap-2.5 rounded-md border-l-[3px] border-transparent px-3 py-2 text-sm font-medium text-slate hover:bg-surface dark:text-mist dark:hover:bg-ink"
           :class="route.path === item.to && 'border-primary bg-[var(--color-primary-soft)] text-primary dark:bg-ink dark:text-primary'"
         >
+          <svg viewBox="0 0 24 24" class="h-4.5 w-4.5 shrink-0" fill="none" aria-hidden="true">
+            <template v-if="item.icon === 'grid'">
+              <rect x="4" y="4" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.5" />
+              <rect x="13" y="4" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.5" />
+              <rect x="4" y="13" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.5" />
+              <rect x="13" y="13" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.5" />
+            </template>
+            <template v-else-if="item.icon === 'building'">
+              <rect x="5" y="3.5" width="10" height="17" rx="1" stroke="currentColor" stroke-width="1.5" />
+              <path d="M15 20v-4h4v4M8 7h1M8 10.5h1M8 14h1M12 7h1M12 10.5h1M12 14h1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+            </template>
+            <template v-else-if="item.icon === 'clipboard'">
+              <rect x="5" y="4.5" width="14" height="16" rx="1.5" stroke="currentColor" stroke-width="1.5" />
+              <rect x="9" y="3" width="6" height="3" rx="1" stroke="currentColor" stroke-width="1.5" />
+              <path d="M8.5 12h7M8.5 15.5h7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+            </template>
+            <template v-else-if="item.icon === 'users'">
+              <circle cx="9" cy="8.5" r="3" stroke="currentColor" stroke-width="1.5" />
+              <path d="M3.5 19c0-3 2.5-5 5.5-5s5.5 2 5.5 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+              <path d="M15.5 5.5a3 3 0 0 1 0 6M17.5 19c0-2.6-1.6-4.5-3.5-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+            </template>
+            <template v-else-if="item.icon === 'pin'">
+              <path d="M12 21s-6.5-5.8-6.5-11A6.5 6.5 0 0 1 18.5 10c0 5.2-6.5 11-6.5 11Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" />
+              <circle cx="12" cy="10" r="2.2" stroke="currentColor" stroke-width="1.5" />
+            </template>
+            <template v-else-if="item.icon === 'badge'">
+              <rect x="5" y="5" width="14" height="15" rx="2" stroke="currentColor" stroke-width="1.5" />
+              <circle cx="12" cy="10.5" r="2.5" stroke="currentColor" stroke-width="1.5" />
+              <path d="M8 17c.7-1.8 2.2-2.5 4-2.5s3.3.7 4 2.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+            </template>
+          </svg>
           {{ item.label }}
         </RouterLink>
       </nav>

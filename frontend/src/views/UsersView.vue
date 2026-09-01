@@ -21,6 +21,11 @@ const roleLabels: Record<Role, string> = {
   TENANT_ADMIN: 'Администратор',
   DISPATCHER: 'Диспетчер',
   ELECTRICIAN: 'Инспектор',
+  // MASTER/CLIENT never appear here -- tenant staff management only ever
+  // deals with DISPATCHER/ELECTRICIAN (enforced server-side too), but the
+  // Role union is shared with the marketplace so this map must stay total.
+  MASTER: 'Мастер',
+  CLIENT: 'Клиент',
 }
 
 const items = ref<UserDTO[]>([])

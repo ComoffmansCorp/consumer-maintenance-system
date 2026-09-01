@@ -1,9 +1,10 @@
-export type Role = 'SUPER_ADMIN' | 'TENANT_ADMIN' | 'DISPATCHER' | 'ELECTRICIAN'
+export type Role = 'SUPER_ADMIN' | 'TENANT_ADMIN' | 'DISPATCHER' | 'ELECTRICIAN' | 'MASTER' | 'CLIENT'
 
 export interface AuthResponse {
   accessToken: string
   refreshToken: string
   expiresIn: number
+  userId: number
   fullName: string
   role: Role
   tenantId?: number
@@ -172,4 +173,50 @@ export interface NotificationDTO {
   payload?: Record<string, unknown>
   read: boolean
   createdAt: string
+}
+
+// --- marketplace (заявки клиентов, независимо от tenant) ---
+
+export interface CategoryDTO {
+  id: number
+  name: string
+  active: boolean
+}
+
+export interface ServiceDTO {
+  id: number
+  categoryId: number
+  name: string
+  description?: string
+  active: boolean
+}
+
+export type RequestStatus = 'OPEN' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELED'
+
+export interface RequestDTO {
+  id: number
+  serviceId: number
+  serviceName?: string
+  categoryName?: string
+  description: string
+  addressText: string
+  latitude?: number
+  longitude?: number
+  status: RequestStatus
+  clientId: number
+  clientName?: string
+  masterId?: number
+  masterName?: string
+  createdAt: string
+  updatedAt: string
+  claimedAt?: string
+  completedAt?: string
+  canceledAt?: string
+  cancelReason?: string
+}
+
+export interface MasterProfileDTO {
+  city?: string
+  bio?: string
+  specializationIds: number[]
 }

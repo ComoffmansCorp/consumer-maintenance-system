@@ -33,6 +33,19 @@ type InspectionAct struct {
 	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
 }
 
+type MasterProfile struct {
+	UserID    int64              `json:"user_id"`
+	City      pgtype.Text        `json:"city"`
+	Bio       pgtype.Text        `json:"bio"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
+}
+
+type MasterSpecialization struct {
+	MasterUserID int64 `json:"master_user_id"`
+	ServiceID    int64 `json:"service_id"`
+}
+
 type Meter struct {
 	ID                  int64              `json:"id"`
 	Type                string             `json:"type"`
@@ -106,6 +119,40 @@ type ReplacementAct struct {
 	NewReadings      pgtype.Float8      `json:"new_readings"`
 	CreatedAt        pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt        pgtype.Timestamptz `json:"updated_at"`
+}
+
+type Service struct {
+	ID          int64              `json:"id"`
+	CategoryID  int64              `json:"category_id"`
+	Name        string             `json:"name"`
+	Description pgtype.Text        `json:"description"`
+	Active      bool               `json:"active"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+}
+
+type ServiceCategory struct {
+	ID        int64              `json:"id"`
+	Name      string             `json:"name"`
+	Active    bool               `json:"active"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+}
+
+type ServiceRequest struct {
+	ID           int64              `json:"id"`
+	ClientID     int64              `json:"client_id"`
+	ServiceID    int64              `json:"service_id"`
+	Description  string             `json:"description"`
+	AddressText  string             `json:"address_text"`
+	Latitude     pgtype.Float8      `json:"latitude"`
+	Longitude    pgtype.Float8      `json:"longitude"`
+	Status       string             `json:"status"`
+	MasterID     pgtype.Int8        `json:"master_id"`
+	CreatedAt    pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
+	ClaimedAt    pgtype.Timestamptz `json:"claimed_at"`
+	CompletedAt  pgtype.Timestamptz `json:"completed_at"`
+	CanceledAt   pgtype.Timestamptz `json:"canceled_at"`
+	CancelReason pgtype.Text        `json:"cancel_reason"`
 }
 
 type Task struct {

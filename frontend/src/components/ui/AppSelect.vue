@@ -14,11 +14,11 @@ defineEmits<{ 'update:modelValue': [value: string] }>()
 
 <template>
   <label class="flex flex-col gap-1.5">
-    <span v-if="label" class="text-sm font-medium text-slate dark:text-mist">{{ label }}</span>
+    <span v-if="label" class="field-label">{{ label }}</span>
     <select
       :value="modelValue ?? ''"
       :required="required"
-      class="rounded-md border border-line bg-white px-3 py-2 text-sm text-ink focus-visible:border-primary dark:border-graphite dark:bg-ink dark:text-surface"
+      class="field-underline"
       @change="$emit('update:modelValue', ($event.target as HTMLSelectElement).value)"
     >
       <option v-if="placeholder" value="" disabled>{{ placeholder }}</option>

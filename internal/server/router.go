@@ -12,6 +12,7 @@ import (
 	"github.com/myurbondarchuk/consumer-maintenance-system/internal/address"
 	"github.com/myurbondarchuk/consumer-maintenance-system/internal/auth"
 	"github.com/myurbondarchuk/consumer-maintenance-system/internal/consumer"
+	"github.com/myurbondarchuk/consumer-maintenance-system/internal/marketplace"
 	"github.com/myurbondarchuk/consumer-maintenance-system/internal/meter"
 	"github.com/myurbondarchuk/consumer-maintenance-system/internal/notification"
 	"github.com/myurbondarchuk/consumer-maintenance-system/internal/organization"
@@ -36,6 +37,7 @@ type Dependencies struct {
 	MeterHandler        *meter.Handler
 	PhotoHandler        *photo.Handler
 	NotificationHandler *notification.Handler
+	MarketplaceHandler  *marketplace.Handler
 	CORSOrigins         []string
 }
 
@@ -57,12 +59,18 @@ func NewRouter(deps Dependencies) http.Handler {
 	publicPaths := map[string]struct{}{
 		"/api/auth/login":                 {},
 		"/api/auth/register-company":      {},
+		"/api/auth/register-client":       {},
+		"/api/auth/register-master":       {},
 		"/api/auth/bootstrap-super-admin": {},
 		"/api/auth/refresh":               {},
 		"/api/auth/logout":                {},
-		"/health/live":                    {},
-		"/health/ready":                   {},
-		"/metrics":                        {},
+		// Catalog browsing is public so the marketplace landing page can
+		// show services before a visitor registers or logs in.
+		"/api/marketplace/categories": {},
+		"/api/marketplace/services":   {},
+		"/health/live":                {},
+		"/health/ready":               {},
+		"/metrics":                    {},
 	}
 
 	r.Route("/api", func(api chi.Router) {
@@ -108,6 +116,10 @@ func NewRouter(deps Dependencies) http.Handler {
 
 		api.Route("/notifications", func(notifications chi.Router) {
 			notifications.Mount("/", deps.NotificationHandler.Routes())
+		})
+
+		api.Route("/marketplace", func(mkt chi.Router) {
+			mkt.Mount("/", deps.MarketplaceHandler.Routes())
 		})
 	})
 

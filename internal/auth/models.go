@@ -9,6 +9,11 @@ const (
 	RoleTenantAdmin Role = "TENANT_ADMIN"
 	RoleDispatcher  Role = "DISPATCHER"
 	RoleElectrician Role = "ELECTRICIAN"
+
+	// Marketplace roles: platform-level (TenantID == nil), same as
+	// RoleSuperAdmin — not tied to a single tenant/company.
+	RoleMaster Role = "MASTER"
+	RoleClient Role = "CLIENT"
 )
 
 type User struct {

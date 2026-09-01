@@ -16,13 +16,13 @@ defineEmits<{ 'update:modelValue': [value: string] }>()
 
 <template>
   <label class="flex flex-col gap-1.5">
-    <span v-if="label" class="text-sm font-medium text-slate dark:text-mist">{{ label }}</span>
+    <span v-if="label" class="field-label">{{ label }}</span>
     <input
       :type="type"
       :value="modelValue ?? ''"
       :placeholder="placeholder"
       :required="required"
-      class="rounded-md border border-line bg-white px-3 py-2 text-sm text-ink placeholder:text-mist focus-visible:border-primary dark:border-graphite dark:bg-ink dark:text-surface"
+      class="field-underline"
       :class="mono && 'data-mono'"
       @input="$emit('update:modelValue', ($event.target as HTMLInputElement).value)"
     />

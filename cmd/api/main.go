@@ -17,6 +17,8 @@ import (
 	authdb "github.com/myurbondarchuk/consumer-maintenance-system/internal/auth/db"
 	"github.com/myurbondarchuk/consumer-maintenance-system/internal/consumer"
 	consumerdb "github.com/myurbondarchuk/consumer-maintenance-system/internal/consumer/db"
+	"github.com/myurbondarchuk/consumer-maintenance-system/internal/marketplace"
+	marketplacedb "github.com/myurbondarchuk/consumer-maintenance-system/internal/marketplace/db"
 	"github.com/myurbondarchuk/consumer-maintenance-system/internal/meter"
 	meterdb "github.com/myurbondarchuk/consumer-maintenance-system/internal/meter/db"
 	"github.com/myurbondarchuk/consumer-maintenance-system/internal/notification"
@@ -135,6 +137,12 @@ func main() {
 	notificationService.RegisterHandlers(eventBus)
 	notificationHandler := notification.NewHandler(notificationService)
 
+	// --- marketplace (platform-level, not tenant-scoped: client requests,
+	// masters claim from the open pool) ---
+	marketplaceRepo := marketplace.NewRepository(marketplacedb.New(pool))
+	marketplaceService := marketplace.NewService(marketplaceRepo, wiring.NewMarketplaceUserAdapter(authService))
+	marketplaceHandler := marketplace.NewHandler(marketplaceService)
+
 	router := server.NewRouter(server.Dependencies{
 		Logger:              logger,
 		Pool:                pool,
@@ -148,6 +156,7 @@ func main() {
 		MeterHandler:        meterHandler,
 		PhotoHandler:        photoHandler,
 		NotificationHandler: notificationHandler,
+		MarketplaceHandler:  marketplaceHandler,
 		CORSOrigins:         cfg.CORSAllowedOrigins,
 	})
 

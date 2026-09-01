@@ -21,6 +21,8 @@ func NewHandler(service *Service) *Handler {
 func (h *Handler) Routes() chi.Router {
 	r := chi.NewRouter()
 	r.Post("/register-company", h.registerCompany)
+	r.Post("/register-client", h.registerClient)
+	r.Post("/register-master", h.registerMaster)
 	r.Post("/bootstrap-super-admin", h.bootstrapSuperAdmin)
 	r.Post("/login", h.login)
 	r.Post("/refresh", h.refresh)
@@ -82,6 +84,36 @@ func (h *Handler) registerCompany(w http.ResponseWriter, r *http.Request) {
 	}
 
 	resp, err := h.service.RegisterCompany(r.Context(), req)
+	if err != nil {
+		h.writeError(w, err)
+		return
+	}
+	httpx.WriteJSON(w, http.StatusOK, resp)
+}
+
+func (h *Handler) registerClient(w http.ResponseWriter, r *http.Request) {
+	var req RegisterMarketplaceRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		httpx.WriteProblem(w, http.StatusBadRequest, "Bad request", "Invalid JSON body")
+		return
+	}
+
+	resp, err := h.service.RegisterClient(r.Context(), req)
+	if err != nil {
+		h.writeError(w, err)
+		return
+	}
+	httpx.WriteJSON(w, http.StatusOK, resp)
+}
+
+func (h *Handler) registerMaster(w http.ResponseWriter, r *http.Request) {
+	var req RegisterMarketplaceRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		httpx.WriteProblem(w, http.StatusBadRequest, "Bad request", "Invalid JSON body")
+		return
+	}
+
+	resp, err := h.service.RegisterMaster(r.Context(), req)
 	if err != nil {
 		h.writeError(w, err)
 		return

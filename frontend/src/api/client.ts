@@ -66,7 +66,7 @@ api.interceptors.response.use(
         return api(original)
       }
       clearSession()
-      window.location.href = '/login'
+      window.location.href = window.location.pathname.startsWith('/marketplace') ? '/marketplace/login' : '/login'
     }
     return Promise.reject(error)
   },

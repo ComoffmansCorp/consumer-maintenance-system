@@ -5,6 +5,7 @@ import { useAuthStore } from '@/stores/auth'
 import { extractErrorMessage } from '@/api/client'
 import AppInput from '@/components/ui/AppInput.vue'
 import AppButton from '@/components/ui/AppButton.vue'
+import AuthSplitPanel from '@/components/layout/AuthSplitPanel.vue'
 
 const auth = useAuthStore()
 const router = useRouter()
@@ -32,34 +33,40 @@ async function submit() {
 </script>
 
 <template>
-  <div class="auth-shell flex min-h-screen items-center justify-center bg-surface px-4 dark:bg-ink">
-    <div class="card w-full max-w-sm p-8">
-      <h1 class="font-display text-xl font-semibold text-ink dark:text-surface">Вход в систему</h1>
-      <p class="mt-1 text-sm text-slate dark:text-mist">Обслуживание приборов учёта</p>
+  <div class="flex min-h-screen bg-surface dark:bg-ink">
+    <AuthSplitPanel />
 
-      <form class="mt-6 flex flex-col gap-4" @submit.prevent="submit">
-        <AppInput
-          v-model="tenantCode"
-          label="Код компании"
-          placeholder="Оставьте пустым для входа как супер-админ"
-        />
-        <AppInput v-model="username" label="Логин" required />
-        <AppInput v-model="password" type="password" label="Пароль" required />
+    <div class="flex flex-1 items-center justify-center px-6 py-12">
+      <div class="w-full max-w-sm">
+        <p class="field-label text-primary">Вход в систему</p>
+        <h1 class="mt-1 font-display text-3xl font-semibold text-ink dark:text-surface">
+          Здравствуйте
+        </h1>
 
-        <p v-if="error" class="text-sm font-medium" style="color: var(--color-status-canceled)">
-          {{ error }}
-        </p>
+        <form class="mt-8 flex flex-col gap-5" @submit.prevent="submit">
+          <AppInput
+            v-model="tenantCode"
+            label="Код компании"
+            placeholder="Оставьте пустым для входа как супер-админ"
+          />
+          <AppInput v-model="username" label="Логин" required />
+          <AppInput v-model="password" type="password" label="Пароль" required />
 
-        <AppButton type="submit" :loading="loading" class="w-full justify-center">Войти</AppButton>
-      </form>
+          <p v-if="error" class="text-sm font-medium" style="color: var(--color-status-canceled)">
+            {{ error }}
+          </p>
 
-      <div class="mt-6 flex flex-col gap-1 text-center text-sm text-slate dark:text-mist">
-        <RouterLink to="/register-company" class="font-medium text-primary hover:underline">
-          Зарегистрировать компанию
-        </RouterLink>
-        <RouterLink to="/bootstrap" class="text-xs text-mist hover:underline">
-          Первый запуск: создать супер-админа
-        </RouterLink>
+          <AppButton type="submit" :loading="loading" class="mt-2 w-full justify-center">Войти</AppButton>
+        </form>
+
+        <div class="mt-8 flex flex-col gap-1.5 border-t border-line pt-6 text-sm dark:border-graphite">
+          <RouterLink to="/register-company" class="font-medium text-primary hover:underline">
+            Зарегистрировать компанию
+          </RouterLink>
+          <RouterLink to="/bootstrap" class="text-xs text-mist hover:underline">
+            Первый запуск: создать супер-админа
+          </RouterLink>
+        </div>
       </div>
     </div>
   </div>

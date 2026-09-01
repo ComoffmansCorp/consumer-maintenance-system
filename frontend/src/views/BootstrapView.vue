@@ -6,6 +6,7 @@ import { useAuthStore } from '@/stores/auth'
 import { extractErrorMessage } from '@/api/client'
 import AppInput from '@/components/ui/AppInput.vue'
 import AppButton from '@/components/ui/AppButton.vue'
+import AuthSplitPanel from '@/components/layout/AuthSplitPanel.vue'
 
 const auth = useAuthStore()
 const router = useRouter()
@@ -36,22 +37,29 @@ async function submit() {
 </script>
 
 <template>
-  <div class="auth-shell flex min-h-screen items-center justify-center bg-surface px-4 dark:bg-ink">
-    <div class="card w-full max-w-sm p-8">
-      <h1 class="font-display text-xl font-semibold text-ink dark:text-surface">Первый запуск</h1>
-      <p class="mt-1 text-sm text-slate dark:text-mist">Создание супер-администратора платформы</p>
+  <div class="flex min-h-screen bg-surface dark:bg-ink">
+    <AuthSplitPanel tag="ПЕРВЫЙ ЗАПУСК СИСТЕМЫ" />
 
-      <form class="mt-6 flex flex-col gap-4" @submit.prevent="submit">
-        <AppInput v-model="fullName" label="Полное имя" required />
-        <AppInput v-model="username" label="Логин" required />
-        <AppInput v-model="password" type="password" label="Пароль" required />
+    <div class="flex flex-1 items-center justify-center px-6 py-12">
+      <div class="w-full max-w-sm">
+        <p class="field-label text-primary">Первый запуск</p>
+        <h1 class="mt-1 font-display text-3xl font-semibold text-ink dark:text-surface">
+          Супер-админ
+        </h1>
+        <p class="mt-2 text-sm text-slate dark:text-mist">Создание супер-администратора платформы</p>
 
-        <p v-if="error" class="text-sm font-medium" style="color: var(--color-status-canceled)">
-          {{ error }}
-        </p>
+        <form class="mt-8 flex flex-col gap-5" @submit.prevent="submit">
+          <AppInput v-model="fullName" label="Полное имя" required />
+          <AppInput v-model="username" label="Логин" required />
+          <AppInput v-model="password" type="password" label="Пароль" required />
 
-        <AppButton type="submit" :loading="loading" class="w-full justify-center">Создать</AppButton>
-      </form>
+          <p v-if="error" class="text-sm font-medium" style="color: var(--color-status-canceled)">
+            {{ error }}
+          </p>
+
+          <AppButton type="submit" :loading="loading" class="mt-2 w-full justify-center">Создать</AppButton>
+        </form>
+      </div>
     </div>
   </div>
 </template>

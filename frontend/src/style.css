@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Playfair+Display:wght@500;600;700&family=Golos+Text:wght@400;500;600;700&display=swap');
 @import 'tailwindcss';
 
 /* Опломбировано (Field Ledger) — design system for Consumer Maintenance System.
@@ -15,16 +15,16 @@
 
   /* Steel housing neutrals */
   --color-ink: #14181c;
-  --color-graphite: #1f262b;
+  --color-graphite: #1b2025;
   --color-slate: #4d5b66;
-  --color-mist: #93a1ab;
-  --color-line: #dde3e6;
-  --color-surface: #f4f6f6;
+  --color-mist: #8b99a3;
+  --color-line: #d7dee1;
+  --color-surface: #eef1f2;
 
   /* Brass seal accent */
-  --color-primary: #b8863a;
-  --color-primary-hover: #9c6f2c;
-  --color-primary-soft: #f4e8d0;
+  --color-primary: #9c6f2c;
+  --color-primary-hover: #85601f;
+  --color-primary-soft: #f0e4cc;
 
   /* Status = metallurgy of the order's lifecycle: awaiting (raw steel),
      assigned (instrument blue), in progress (working copper), completed
@@ -90,16 +90,6 @@
     @apply border border-line dark:border-graphite;
   }
 
-  /* Ledger paper: a faint ruled backdrop for the auth screens — the one
-     place the system opens with a bit of atmosphere before getting to work. */
-  .auth-shell {
-    background-image: linear-gradient(var(--color-line) 1px, transparent 1px);
-    background-size: 100% 28px;
-  }
-  .dark .auth-shell {
-    background-image: linear-gradient(var(--color-graphite) 1px, transparent 1px);
-  }
-
   /* Odometer: mechanical digit-wheel register, one cell per digit, tabular
      numerals with a seam line through the middle like a meter counter. */
   .odometer {
@@ -130,5 +120,23 @@
      instead of a generic SaaS pill. */
   .seal-tag {
     @apply inline-flex items-center gap-1.5 rounded-[3px] border-l-[3px] bg-white py-1 pl-2 pr-2.5 text-xs font-medium tracking-wide dark:bg-graphite;
+  }
+
+  /* Die-cut notch: signature silhouette for primary actions — the clipped
+     corner reads like a punched inspection tag, reused nowhere else so it
+     stays a single, recognizable mark rather than decoration sprinkled
+     everywhere. */
+  .notch-corner {
+    clip-path: polygon(0 0, 100% 0, 100% calc(100% - 11px), calc(100% - 11px) 100%, 0 100%);
+  }
+
+  /* Ledger field: an underlined input evoking a paper inspection form
+     instead of a boxed SaaS text field. */
+  .field-underline {
+    @apply w-full rounded-none border-0 border-b-2 border-line bg-transparent px-0.5 py-2 text-sm text-ink placeholder:text-mist focus-visible:border-primary focus-visible:outline-none dark:border-graphite dark:text-surface;
+  }
+
+  .field-label {
+    @apply text-xs font-semibold uppercase tracking-wider text-slate dark:text-mist;
   }
 }
