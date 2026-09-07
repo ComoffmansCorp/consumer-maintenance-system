@@ -57,6 +57,10 @@ type OfferDTO struct {
 	Status    OfferStatus `json:"status"`
 	CreatedAt time.Time   `json:"createdAt"`
 	UpdatedAt time.Time   `json:"updatedAt"`
+	// MasterAvatarURL is enrichment, not stored on the offer itself -- see
+	// Service.ListOffers, which fills it in via SpecializationPort the same
+	// way RequestDTO.ServiceName is filled in via CatalogPort.
+	MasterAvatarURL *string `json:"masterAvatarUrl,omitempty"`
 }
 
 type FavoriteDTO struct {
@@ -83,7 +87,16 @@ func ToRequestDTO(r ServiceRequest) RequestDTO {
 }
 
 func ToOfferDTO(o Offer) OfferDTO {
-	return OfferDTO(o)
+	return OfferDTO{
+		ID:        o.ID,
+		RequestID: o.RequestID,
+		MasterID:  o.MasterID,
+		Price:     o.Price,
+		Comment:   o.Comment,
+		Status:    o.Status,
+		CreatedAt: o.CreatedAt,
+		UpdatedAt: o.UpdatedAt,
+	}
 }
 
 func ToStatusHistoryDTO(h StatusHistoryEntry) StatusHistoryEntryDTO {

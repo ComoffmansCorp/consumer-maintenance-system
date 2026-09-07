@@ -40,10 +40,19 @@ watch(page, load)
       </div>
       <div v-else class="mt-6 flex flex-col gap-3">
         <div v-for="m in items" :key="m.userId" class="flex items-center justify-between rounded-2xl border border-[#E2DED2] bg-white p-5">
-          <div>
-            <p class="text-sm font-medium">Мастер #{{ m.userId }}<span v-if="m.city"> · {{ m.city }}</span></p>
-            <p v-if="m.bio" class="mt-0.5 text-sm text-[#6E6B60]">{{ m.bio }}</p>
-            <p class="mt-1 text-xs text-[#9B978A]">Специализаций: {{ m.specializationIds.length }}</p>
+          <div class="flex items-center gap-3">
+            <img
+              v-if="m.avatarUrl"
+              :src="m.avatarUrl"
+              alt=""
+              class="h-11 w-11 shrink-0 rounded-full object-cover"
+            />
+            <div v-else class="h-11 w-11 shrink-0 rounded-full bg-[#EFEBE1]" />
+            <div>
+              <p class="text-sm font-medium">Мастер #{{ m.userId }}<span v-if="m.city"> · {{ m.city }}</span></p>
+              <p v-if="m.bio" class="mt-0.5 text-sm text-[#6E6B60]">{{ m.bio }}</p>
+              <p class="mt-1 text-xs text-[#9B978A]">Специализаций: {{ m.specializationIds.length }}</p>
+            </div>
           </div>
           <div class="text-right">
             <p class="text-sm font-medium">★ {{ m.ratingAvg.toFixed(1) }}</p>

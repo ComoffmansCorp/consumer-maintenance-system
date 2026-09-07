@@ -22,6 +22,13 @@ func (a *MasterAdapter) HasSpecialization(ctx context.Context, masterUserID, ser
 	return a.master.HasSpecialization(ctx, masterUserID, serviceID)
 }
 
+// GetAvatarURL also satisfies request.SpecializationPort -- request enriches
+// each OfferDTO with the bidding master's avatar the same way it already
+// enriches RequestDTO.ServiceName via CatalogPort.
+func (a *MasterAdapter) GetAvatarURL(ctx context.Context, masterUserID int64) (*string, error) {
+	return a.master.GetAvatarURL(ctx, masterUserID)
+}
+
 // RecordReview satisfies review.MasterPort.
 func (a *MasterAdapter) RecordReview(ctx context.Context, masterUserID int64, rating int) error {
 	return a.master.RecordReview(ctx, masterUserID, rating)

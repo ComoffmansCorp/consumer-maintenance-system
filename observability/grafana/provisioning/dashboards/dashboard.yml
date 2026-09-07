@@ -1,0 +1,14 @@
+# Grafana dashboard provider -- loads every .json file placed in the folder
+# below (mounted read-only at /var/lib/grafana/dashboards, see the grafana
+# service's volumes in docker-compose.yml) as a dashboard on first boot.
+apiVersion: 1
+
+providers:
+  - name: default
+    orgId: 1
+    folder: ""
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 30
+    options:
+      path: /var/lib/grafana/dashboards

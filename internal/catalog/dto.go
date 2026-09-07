@@ -15,6 +15,7 @@ type ServiceDTO struct {
 	PriceFrom   *float64 `json:"priceFrom,omitempty"`
 	PriceTo     *float64 `json:"priceTo,omitempty"`
 	Unit        string   `json:"unit,omitempty"`
+	ImageURL    *string  `json:"imageUrl,omitempty"`
 	Active      bool     `json:"active"`
 }
 
@@ -35,6 +36,7 @@ type CreateServiceRequest struct {
 	PriceFrom   *float64 `json:"priceFrom,omitempty"`
 	PriceTo     *float64 `json:"priceTo,omitempty"`
 	Unit        string   `json:"unit,omitempty"`
+	ImageURL    *string  `json:"imageUrl,omitempty"`
 }
 
 type UpdateServiceRequest struct {
@@ -43,6 +45,7 @@ type UpdateServiceRequest struct {
 	PriceFrom   *float64 `json:"priceFrom,omitempty"`
 	PriceTo     *float64 `json:"priceTo,omitempty"`
 	Unit        string   `json:"unit,omitempty"`
+	ImageURL    *string  `json:"imageUrl,omitempty"`
 	Active      bool     `json:"active"`
 }
 
@@ -59,6 +62,7 @@ func ToServiceDTO(o Offering) ServiceDTO {
 		PriceFrom:   o.PriceFrom,
 		PriceTo:     o.PriceTo,
 		Unit:        o.Unit,
+		ImageURL:    o.ImageURL,
 		Active:      o.Active,
 	}
 }

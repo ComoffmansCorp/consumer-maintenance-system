@@ -24,7 +24,7 @@ func (q *Queries) CountMasterProfiles(ctx context.Context) (int64, error) {
 }
 
 const getMasterProfile = `-- name: GetMasterProfile :one
-SELECT user_id, city, bio, rating_avg, rating_count, created_at, updated_at
+SELECT user_id, city, bio, rating_avg, rating_count, created_at, updated_at, avatar_url
 FROM master_profiles
 WHERE user_id = $1
 LIMIT 1
@@ -41,12 +41,13 @@ func (q *Queries) GetMasterProfile(ctx context.Context, userID int64) (MasterPro
 		&i.RatingCount,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.AvatarUrl,
 	)
 	return i, err
 }
 
 const listMasterProfiles = `-- name: ListMasterProfiles :many
-SELECT user_id, city, bio, rating_avg, rating_count, created_at, updated_at
+SELECT user_id, city, bio, rating_avg, rating_count, created_at, updated_at, avatar_url
 FROM master_profiles
 ORDER BY rating_avg DESC, created_at DESC
 LIMIT $2 OFFSET $1
@@ -74,6 +75,7 @@ func (q *Queries) ListMasterProfiles(ctx context.Context, arg ListMasterProfiles
 			&i.RatingCount,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.AvatarUrl,
 		); err != nil {
 			return nil, err
 		}
@@ -91,7 +93,7 @@ SET rating_avg = ROUND(((rating_avg * rating_count) + $1::numeric) / (rating_cou
     rating_count = rating_count + 1,
     updated_at = NOW()
 WHERE user_id = $2
-RETURNING user_id, city, bio, rating_avg, rating_count, created_at, updated_at
+RETURNING user_id, city, bio, rating_avg, rating_count, created_at, updated_at, avatar_url
 `
 
 type RecordMasterReviewParams struct {
@@ -113,25 +115,33 @@ func (q *Queries) RecordMasterReview(ctx context.Context, arg RecordMasterReview
 		&i.RatingCount,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.AvatarUrl,
 	)
 	return i, err
 }
 
 const upsertMasterProfile = `-- name: UpsertMasterProfile :one
-INSERT INTO master_profiles (user_id, city, bio)
-VALUES ($1, $2, $3)
-ON CONFLICT (user_id) DO UPDATE SET city = excluded.city, bio = excluded.bio, updated_at = NOW()
-RETURNING user_id, city, bio, rating_avg, rating_count, created_at, updated_at
+INSERT INTO master_profiles (user_id, city, bio, avatar_url)
+VALUES ($1, $2, $3, $4)
+ON CONFLICT (user_id) DO UPDATE SET city = excluded.city, bio = excluded.bio,
+    avatar_url = excluded.avatar_url, updated_at = NOW()
+RETURNING user_id, city, bio, rating_avg, rating_count, created_at, updated_at, avatar_url
 `
 
 type UpsertMasterProfileParams struct {
-	UserID int64       `json:"user_id"`
-	City   pgtype.Text `json:"city"`
-	Bio    pgtype.Text `json:"bio"`
+	UserID    int64       `json:"user_id"`
+	City      pgtype.Text `json:"city"`
+	Bio       pgtype.Text `json:"bio"`
+	AvatarUrl pgtype.Text `json:"avatar_url"`
 }
 
 func (q *Queries) UpsertMasterProfile(ctx context.Context, arg UpsertMasterProfileParams) (MasterProfile, error) {
-	row := q.db.QueryRow(ctx, upsertMasterProfile, arg.UserID, arg.City, arg.Bio)
+	row := q.db.QueryRow(ctx, upsertMasterProfile,
+		arg.UserID,
+		arg.City,
+		arg.Bio,
+		arg.AvatarUrl,
+	)
 	var i MasterProfile
 	err := row.Scan(
 		&i.UserID,
@@ -141,6 +151,7 @@ func (q *Queries) UpsertMasterProfile(ctx context.Context, arg UpsertMasterProfi
 		&i.RatingCount,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.AvatarUrl,
 	)
 	return i, err
 }

@@ -231,9 +231,18 @@ function formatDateTime(iso?: string) {
               :key="offer.id"
               class="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[#E2DED2] px-4 py-3"
             >
-              <div>
-                <p class="text-sm font-medium">{{ offer.price }} ₽ — мастер #{{ offer.masterId }}</p>
-                <p v-if="offer.comment" class="mt-0.5 text-sm text-[#6E6B60]">{{ offer.comment }}</p>
+              <div class="flex items-center gap-3">
+                <img
+                  v-if="offer.masterAvatarUrl"
+                  :src="offer.masterAvatarUrl"
+                  alt=""
+                  class="h-9 w-9 shrink-0 rounded-full object-cover"
+                />
+                <div v-else class="h-9 w-9 shrink-0 rounded-full bg-[#EFEBE1]" />
+                <div>
+                  <p class="text-sm font-medium">{{ offer.price }} ₽ — мастер #{{ offer.masterId }}</p>
+                  <p v-if="offer.comment" class="mt-0.5 text-sm text-[#6E6B60]">{{ offer.comment }}</p>
+                </div>
               </div>
               <button
                 type="button"

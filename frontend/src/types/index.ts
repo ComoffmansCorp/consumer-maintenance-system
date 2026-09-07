@@ -50,6 +50,7 @@ export interface ServiceDTO {
   priceFrom?: number
   priceTo?: number
   unit?: string
+  imageUrl?: string
   active: boolean
 }
 
@@ -59,6 +60,7 @@ export interface ProfileDTO {
   userId: number
   city?: string
   bio?: string
+  avatarUrl?: string
   ratingAvg: number
   ratingCount: number
   specializationIds: number[]
@@ -104,6 +106,7 @@ export interface OfferDTO {
   status: OfferStatus
   createdAt: string
   updatedAt: string
+  masterAvatarUrl?: string
 }
 
 export interface FavoriteDTO {

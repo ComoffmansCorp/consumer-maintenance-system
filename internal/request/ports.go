@@ -20,9 +20,13 @@ type CatalogPort interface {
 // SpecializationPort is the hard, server-side specialization gate on offer
 // submission -- same rule the old flat marketplace package enforced on
 // claim: a master cannot bid on work outside what they're specialized in,
-// even by calling the API directly. Satisfied by master.Service.
+// even by calling the API directly. Also doubles as the lookup ListOffers
+// uses to enrich each OfferDTO with the bidding master's avatar, since it's
+// the same master.Service already wired in as this port. Satisfied by
+// master.Service via a wiring adapter.
 type SpecializationPort interface {
 	HasSpecialization(ctx context.Context, masterUserID, serviceID int64) (bool, error)
+	GetAvatarURL(ctx context.Context, masterUserID int64) (*string, error)
 }
 
 // TxRunner wraps multi-step writes (AcceptOffer touches the offer, its

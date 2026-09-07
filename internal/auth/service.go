@@ -12,6 +12,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	platformauth "github.com/myurbondarchuk/consumer-maintenance-system/internal/platform/auth"
+	platformcache "github.com/myurbondarchuk/consumer-maintenance-system/internal/platform/cache"
 )
 
 var (
@@ -24,10 +25,15 @@ var (
 type Service struct {
 	repo   *Repository
 	tokens *platformauth.Service
+	// cache is used to revoke an access token's jti on logout so it stops
+	// working immediately instead of riding out its own TTL (see
+	// revokeAccessToken). Nil is a valid value -- e.g. cmd/seed never logs
+	// anyone out, so it wires this domain up without a cache client at all.
+	cache *platformcache.Client
 }
 
-func NewService(repo *Repository, tokens *platformauth.Service) *Service {
-	return &Service{repo: repo, tokens: tokens}
+func NewService(repo *Repository, tokens *platformauth.Service, cache *platformcache.Client) *Service {
+	return &Service{repo: repo, tokens: tokens, cache: cache}
 }
 
 func (s *Service) BootstrapSuperAdmin(ctx context.Context, req BootstrapSuperAdminRequest) (AuthResponse, error) {
@@ -164,11 +170,42 @@ func (s *Service) GetUser(ctx context.Context, id int64) (UserDTO, error) {
 	return ToUserDTO(user), nil
 }
 
-func (s *Service) Logout(ctx context.Context, req LogoutRequest) error {
+// Logout revokes the refresh token in Postgres (as before) and, best-effort,
+// the access token's jti in Redis (accessToken is whatever the client sent
+// in its Authorization header, possibly empty -- /api/auth/logout is a
+// public route, see router.go, so it isn't guaranteed to carry one).
+func (s *Service) Logout(ctx context.Context, req LogoutRequest, accessToken string) error {
 	if strings.TrimSpace(req.RefreshToken) == "" {
 		return ErrInvalidRefreshToken
 	}
-	return s.repo.RevokeRefreshToken(ctx, hashToken(req.RefreshToken))
+	if err := s.repo.RevokeRefreshToken(ctx, hashToken(req.RefreshToken)); err != nil {
+		return err
+	}
+	s.revokeAccessToken(ctx, accessToken)
+	return nil
+}
+
+// revokeAccessToken records the access token's jti in Redis with a TTL
+// matching its own remaining lifetime, so middleware.JWTAuth's revocation
+// check (internal/platform/middleware/auth.go) rejects it immediately
+// instead of letting it ride out its own expiry after logout. Anything that
+// keeps this from happening -- no cache configured, no/invalid/expired
+// token, a Redis hiccup -- is swallowed: the refresh token is already
+// revoked above, which is the part that actually matters for correctness;
+// this is defense in depth on top of it, not the thing logout depends on.
+func (s *Service) revokeAccessToken(ctx context.Context, accessToken string) {
+	if s.cache == nil || strings.TrimSpace(accessToken) == "" {
+		return
+	}
+	claims, err := s.tokens.ParseAccessToken(accessToken)
+	if err != nil || claims.ID == "" || claims.ExpiresAt == nil {
+		return
+	}
+	ttl := time.Until(claims.ExpiresAt.Time)
+	if ttl <= 0 {
+		return
+	}
+	_ = s.cache.Set(ctx, "revoked:"+claims.ID, "1", ttl)
 }
 
 func (s *Service) buildAuthResponse(ctx context.Context, user User) (AuthResponse, error) {

@@ -65,11 +65,14 @@ func main() {
 		os.Exit(1) //nolint:gocritic // fatal startup error; process exit reclaims the pool anyway
 	}
 
+	// No cache client for either domain here: seeding never logs anyone out
+	// (no access token revocation needed) and runs once against a database
+	// it just populated (no benefit from a catalog read-through cache).
 	authRepo := auth.NewRepository(authdb.New(pool))
-	authService := auth.NewService(authRepo, tokenService)
+	authService := auth.NewService(authRepo, tokenService, nil)
 
 	catalogRepo := catalog.NewRepository(catalogdb.New(pool))
-	catalogService := catalog.NewService(catalogRepo)
+	catalogService := catalog.NewService(catalogRepo, nil, logger)
 	catalogAdapter := wiring.NewCatalogAdapter(catalogService)
 
 	masterRepo := master.NewRepository(masterdb.New(pool))
@@ -341,8 +344,11 @@ func (s *seeder) seedUsersAndRequests(serviceIDsByName map[string]int64) error {
 			specIDs = append(specIDs, id)
 			serviceToMasters[id] = append(serviceToMasters[id], resp.UserID)
 		}
+		// i.pravatar.cc/300?u=<username> is deterministic and keyless: the
+		// same username always resolves to the same avatar across reseeds.
+		avatarURL := fmt.Sprintf("https://i.pravatar.cc/300?u=%s", ms.username)
 		if _, err := s.master.UpdateProfile(ctx, resp.UserID, master.UpdateProfileRequest{
-			City: ms.city, Bio: ms.bio, SpecializationIDs: specIDs,
+			City: ms.city, Bio: ms.bio, AvatarURL: &avatarURL, SpecializationIDs: specIDs,
 		}); err != nil {
 			return fmt.Errorf("update %s profile: %w", ms.username, err)
 		}
@@ -548,6 +554,41 @@ func (s *seeder) backdateUser(userID int64, daysAgo int) error {
 	return nil
 }
 
+// cyrillicToLatin is a plain transliteration table -- just enough to turn
+// the (Russian) catalog's service names into readable ASCII slugs for image
+// seed URLs, not a general-purpose transliterator.
+var cyrillicToLatin = map[rune]string{
+	'а': "a", 'б': "b", 'в': "v", 'г': "g", 'д': "d", 'е': "e", 'ё': "yo",
+	'ж': "zh", 'з': "z", 'и': "i", 'й': "y", 'к': "k", 'л': "l", 'м': "m",
+	'н': "n", 'о': "o", 'п': "p", 'р': "r", 'с': "s", 'т': "t", 'у': "u",
+	'ф': "f", 'х': "h", 'ц': "ts", 'ч': "ch", 'ш': "sh", 'щ': "sch",
+	'ъ': "", 'ы': "y", 'ь': "", 'э': "e", 'ю': "yu", 'я': "ya",
+}
+
+// imageSlug turns an arbitrary (Cyrillic) name into a deterministic,
+// URL-safe slug for picsum.photos seed values: the same service name always
+// produces the same slug, so reseeding an unchanged catalog keeps the same
+// demo pictures instead of shuffling them every run.
+func imageSlug(name string) string {
+	var b strings.Builder
+	for _, r := range strings.ToLower(name) {
+		if latin, ok := cyrillicToLatin[r]; ok {
+			b.WriteString(latin)
+			continue
+		}
+		if (r >= 'a' && r <= 'z') || (r >= '0' && r <= '9') {
+			b.WriteRune(r)
+			continue
+		}
+		b.WriteByte('-')
+	}
+	slug := b.String()
+	for strings.Contains(slug, "--") {
+		slug = strings.ReplaceAll(slug, "--", "-")
+	}
+	return strings.Trim(slug, "-")
+}
+
 // seedCategory creates a category (and, recursively, one level of
 // subcategories) plus its services, collecting every created service id by
 // name so the lifecycle-seeding code below can look them up without
@@ -562,9 +603,13 @@ func (s *seeder) seedCategory(cat categorySeed, parentID *int64, serviceIDsByNam
 
 	for _, svc := range cat.services {
 		priceFrom, priceTo := svc.priceFrom, svc.priceTo
+		// picsum.photos/seed/<slug>/... is deterministic: the same service
+		// name always resolves to the same picture across reseeds, and the
+		// URL itself needs no network access to produce.
+		imageURL := fmt.Sprintf("https://picsum.photos/seed/%s/480/320", imageSlug(svc.name))
 		createdSvc, err := s.catalog.CreateService(ctx, catalog.CreateServiceRequest{
 			CategoryID: created.ID, Name: svc.name, Description: svc.description,
-			PriceFrom: &priceFrom, PriceTo: &priceTo, Unit: svc.unit,
+			PriceFrom: &priceFrom, PriceTo: &priceTo, Unit: svc.unit, ImageURL: &imageURL,
 		})
 		if err != nil {
 			return fmt.Errorf("create service %q: %w", svc.name, err)

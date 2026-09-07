@@ -187,7 +187,13 @@ func (s *Service) ListOffers(ctx context.Context, requestID, clientID int64) ([]
 	}
 	out := make([]OfferDTO, 0, len(offers))
 	for _, o := range offers {
-		out = append(out, ToOfferDTO(o))
+		dto := ToOfferDTO(o)
+		avatarURL, err := s.masters.GetAvatarURL(ctx, o.MasterID)
+		if err != nil {
+			return nil, err
+		}
+		dto.MasterAvatarURL = avatarURL
+		out = append(out, dto)
 	}
 	return out, nil
 }

@@ -25,11 +25,12 @@ func (r *Repository) queriesFor(ctx context.Context) *db.Queries {
 	return r.queries
 }
 
-func (r *Repository) UpsertProfile(ctx context.Context, userID int64, city, bio string) (Profile, error) {
+func (r *Repository) UpsertProfile(ctx context.Context, userID int64, city, bio string, avatarURL *string) (Profile, error) {
 	row, err := r.queriesFor(ctx).UpsertMasterProfile(ctx, db.UpsertMasterProfileParams{
-		UserID: userID,
-		City:   pgtype.Text{String: city, Valid: city != ""},
-		Bio:    pgtype.Text{String: bio, Valid: bio != ""},
+		UserID:    userID,
+		City:      pgtype.Text{String: city, Valid: city != ""},
+		Bio:       pgtype.Text{String: bio, Valid: bio != ""},
+		AvatarUrl: textOrNil(avatarURL),
 	})
 	if err != nil {
 		return Profile{}, fmt.Errorf("upsert master profile: %w", err)
@@ -124,9 +125,27 @@ func toProfile(row db.MasterProfile) Profile {
 		UserID:      row.UserID,
 		City:        city,
 		Bio:         bio,
+		AvatarURL:   nilIfEmptyText(row.AvatarUrl),
 		RatingAvg:   row.RatingAvg,
 		RatingCount: row.RatingCount,
 		CreatedAt:   row.CreatedAt.Time,
 		UpdatedAt:   row.UpdatedAt.Time,
 	}
+}
+
+// textOrNil/nilIfEmptyText round-trip an optional string through
+// pgtype.Text for avatar_url -- genuinely optional (nil = "no avatar"),
+// unlike city/bio above where an empty string already means "unset".
+func textOrNil(v *string) pgtype.Text {
+	if v == nil || *v == "" {
+		return pgtype.Text{}
+	}
+	return pgtype.Text{String: *v, Valid: true}
+}
+
+func nilIfEmptyText(t pgtype.Text) *string {
+	if !t.Valid {
+		return nil
+	}
+	return &t.String
 }

@@ -12,6 +12,7 @@ type Config struct {
 	AppEnv             string
 	HTTPAddr           string
 	DatabaseURL        string
+	RedisURL           string
 	JWTSecret          string
 	JWTAccessTTL       time.Duration
 	JWTRefreshTTL      time.Duration
@@ -47,6 +48,7 @@ func Load() (Config, error) {
 		AppEnv:             getEnv("APP_ENV", "development"),
 		HTTPAddr:           getEnv("HTTP_ADDR", ":8080"),
 		DatabaseURL:        dbURL,
+		RedisURL:           getEnv("REDIS_URL", "redis://localhost:6379/0"),
 		JWTSecret:          jwtSecret,
 		JWTAccessTTL:       time.Duration(accessMinutes) * time.Minute,
 		JWTRefreshTTL:      time.Duration(refreshDays) * 24 * time.Hour,

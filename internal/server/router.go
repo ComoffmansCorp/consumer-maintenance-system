@@ -14,6 +14,7 @@ import (
 	"github.com/myurbondarchuk/consumer-maintenance-system/internal/master"
 	"github.com/myurbondarchuk/consumer-maintenance-system/internal/payment"
 	platformauth "github.com/myurbondarchuk/consumer-maintenance-system/internal/platform/auth"
+	platformcache "github.com/myurbondarchuk/consumer-maintenance-system/internal/platform/cache"
 	"github.com/myurbondarchuk/consumer-maintenance-system/internal/platform/db"
 	"github.com/myurbondarchuk/consumer-maintenance-system/internal/platform/middleware"
 	"github.com/myurbondarchuk/consumer-maintenance-system/internal/platform/observability"
@@ -25,6 +26,7 @@ type Dependencies struct {
 	Logger         *slog.Logger
 	Pool           *db.Pool
 	TokenService   *platformauth.Service
+	CacheClient    *platformcache.Client
 	AuthHandler    *auth.Handler
 	CatalogHandler *catalog.Handler
 	MasterHandler  *master.Handler
@@ -44,6 +46,7 @@ func NewRouter(deps Dependencies) http.Handler {
 	r.Use(middleware.Logger(deps.Logger))
 	r.Use(chimiddleware.Timeout(60 * time.Second))
 	r.Use(middleware.CORS(deps.CORSOrigins))
+	r.Use(middleware.Metrics)
 
 	health := observability.NewHealth(deps.Pool)
 	r.Get("/health/live", health.Liveness)
@@ -78,7 +81,7 @@ func NewRouter(deps Dependencies) http.Handler {
 	}
 
 	r.Route("/api", func(api chi.Router) {
-		api.Use(middleware.JWTAuth(deps.TokenService, publicPaths))
+		api.Use(middleware.JWTAuth(deps.TokenService, deps.CacheClient, publicPaths))
 
 		api.Route("/auth", func(authRouter chi.Router) {
 			authRouter.Mount("/", deps.AuthHandler.Routes())

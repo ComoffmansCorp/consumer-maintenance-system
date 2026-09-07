@@ -12,9 +12,9 @@ import (
 )
 
 const createService = `-- name: CreateService :one
-INSERT INTO services (category_id, name, description, price_from, price_to, unit)
-VALUES ($1, $2, $3, $4, $5, $6)
-RETURNING id, category_id, name, description, price_from, price_to, unit, active, created_at, updated_at
+INSERT INTO services (category_id, name, description, price_from, price_to, unit, image_url)
+VALUES ($1, $2, $3, $4, $5, $6, $7)
+RETURNING id, category_id, name, description, price_from, price_to, unit, active, created_at, updated_at, image_url
 `
 
 type CreateServiceParams struct {
@@ -24,6 +24,7 @@ type CreateServiceParams struct {
 	PriceFrom   *float64    `json:"price_from"`
 	PriceTo     *float64    `json:"price_to"`
 	Unit        pgtype.Text `json:"unit"`
+	ImageUrl    pgtype.Text `json:"image_url"`
 }
 
 func (q *Queries) CreateService(ctx context.Context, arg CreateServiceParams) (Service, error) {
@@ -34,6 +35,7 @@ func (q *Queries) CreateService(ctx context.Context, arg CreateServiceParams) (S
 		arg.PriceFrom,
 		arg.PriceTo,
 		arg.Unit,
+		arg.ImageUrl,
 	)
 	var i Service
 	err := row.Scan(
@@ -47,12 +49,13 @@ func (q *Queries) CreateService(ctx context.Context, arg CreateServiceParams) (S
 		&i.Active,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.ImageUrl,
 	)
 	return i, err
 }
 
 const getServiceByID = `-- name: GetServiceByID :one
-SELECT id, category_id, name, description, price_from, price_to, unit, active, created_at, updated_at
+SELECT id, category_id, name, description, price_from, price_to, unit, active, created_at, updated_at, image_url
 FROM services
 WHERE id = $1
 LIMIT 1
@@ -72,12 +75,13 @@ func (q *Queries) GetServiceByID(ctx context.Context, id int64) (Service, error)
 		&i.Active,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.ImageUrl,
 	)
 	return i, err
 }
 
 const listActiveServices = `-- name: ListActiveServices :many
-SELECT id, category_id, name, description, price_from, price_to, unit, active, created_at, updated_at
+SELECT id, category_id, name, description, price_from, price_to, unit, active, created_at, updated_at, image_url
 FROM services
 WHERE active = true
   AND ($1::bigint = 0 OR category_id = $1::bigint)
@@ -105,6 +109,7 @@ func (q *Queries) ListActiveServices(ctx context.Context, categoryID int64) ([]S
 			&i.Active,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.ImageUrl,
 		); err != nil {
 			return nil, err
 		}
@@ -119,9 +124,9 @@ func (q *Queries) ListActiveServices(ctx context.Context, categoryID int64) ([]S
 const updateService = `-- name: UpdateService :one
 UPDATE services
 SET name = $1, description = $2, price_from = $3,
-    price_to = $4, unit = $5, active = $6, updated_at = NOW()
-WHERE id = $7
-RETURNING id, category_id, name, description, price_from, price_to, unit, active, created_at, updated_at
+    price_to = $4, unit = $5, active = $6, image_url = $7, updated_at = NOW()
+WHERE id = $8
+RETURNING id, category_id, name, description, price_from, price_to, unit, active, created_at, updated_at, image_url
 `
 
 type UpdateServiceParams struct {
@@ -131,6 +136,7 @@ type UpdateServiceParams struct {
 	PriceTo     *float64    `json:"price_to"`
 	Unit        pgtype.Text `json:"unit"`
 	Active      bool        `json:"active"`
+	ImageUrl    pgtype.Text `json:"image_url"`
 	ID          int64       `json:"id"`
 }
 
@@ -142,6 +148,7 @@ func (q *Queries) UpdateService(ctx context.Context, arg UpdateServiceParams) (S
 		arg.PriceTo,
 		arg.Unit,
 		arg.Active,
+		arg.ImageUrl,
 		arg.ID,
 	)
 	var i Service
@@ -156,6 +163,7 @@ func (q *Queries) UpdateService(ctx context.Context, arg UpdateServiceParams) (S
 		&i.Active,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.ImageUrl,
 	)
 	return i, err
 }

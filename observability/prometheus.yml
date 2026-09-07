@@ -1,0 +1,24 @@
+# Scrape config for the local demo stack (see docker-compose.yml). Two
+# targets:
+#   - app:8080/metrics             -- internal/platform/observability's
+#                                      promhttp.Handler(), fed by the custom
+#                                      http_requests_total/http_request_duration_seconds
+#                                      collectors in internal/platform/middleware/metrics.go
+#                                      plus the default Go runtime collector.
+#   - nginx-exporter:9113/metrics  -- gateway-level request counts, scraped
+#                                      from nginx's stub_status by the
+#                                      nginx-prometheus-exporter sidecar
+#                                      (nginx itself has no Prometheus
+#                                      endpoint of its own).
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: app
+    static_configs:
+      - targets: ["app:8080"]
+
+  - job_name: gateway
+    static_configs:
+      - targets: ["nginx-exporter:9113"]

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/myurbondarchuk/consumer-maintenance-system/internal/platform/httpx"
@@ -110,11 +111,23 @@ func (h *Handler) logout(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.service.Logout(r.Context(), req); err != nil {
+	if err := h.service.Logout(r.Context(), req, bearerToken(r)); err != nil {
 		h.writeError(w, err)
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
+}
+
+// bearerToken extracts the access token from the Authorization header, if
+// present. /api/auth/logout is a public route (see router.go's
+// publicPaths), so it never runs through middleware.JWTAuth -- the client
+// may or may not still send a bearer token here, and either is valid.
+func bearerToken(r *http.Request) string {
+	header := r.Header.Get("Authorization")
+	if header == "" || !strings.HasPrefix(header, "Bearer ") {
+		return ""
+	}
+	return strings.TrimSpace(strings.TrimPrefix(header, "Bearer "))
 }
 
 func (h *Handler) writeError(w http.ResponseWriter, err error) {

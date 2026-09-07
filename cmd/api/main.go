@@ -21,6 +21,7 @@ import (
 	paymentdb "github.com/myurbondarchuk/consumer-maintenance-system/internal/payment/db"
 	platformauth "github.com/myurbondarchuk/consumer-maintenance-system/internal/platform/auth"
 	"github.com/myurbondarchuk/consumer-maintenance-system/internal/platform/broker"
+	platformcache "github.com/myurbondarchuk/consumer-maintenance-system/internal/platform/cache"
 	"github.com/myurbondarchuk/consumer-maintenance-system/internal/platform/config"
 	platformdb "github.com/myurbondarchuk/consumer-maintenance-system/internal/platform/db"
 	"github.com/myurbondarchuk/consumer-maintenance-system/internal/platform/wiring"
@@ -48,6 +49,19 @@ func main() {
 	}
 	defer pool.Close()
 
+	// Redis is a soft dependency: session revocation and the catalog cache
+	// both degrade gracefully to "no cache" (see cache.Client usage in
+	// internal/auth and internal/catalog) rather than requiring it to be up,
+	// so a connect failure here logs and continues with a nil client instead
+	// of os.Exit like the Postgres pool above.
+	cacheClient, err := platformcache.Connect(ctx, cfg.RedisURL)
+	if err != nil {
+		logger.Error("connect redis, continuing without cache", "error", err)
+		cacheClient = nil
+	} else {
+		defer func() { _ = cacheClient.Close() }()
+	}
+
 	txManager := platformdb.NewTxManager(pool)
 
 	tokenService, err := platformauth.NewService(cfg.JWTSecret, cfg.JWTAccessTTL, cfg.JWTRefreshTTL)
@@ -58,12 +72,12 @@ func main() {
 
 	// --- auth (foundational, no dependencies on other domains) ---
 	authRepo := auth.NewRepository(authdb.New(pool))
-	authService := auth.NewService(authRepo, tokenService)
+	authService := auth.NewService(authRepo, tokenService, cacheClient)
 	authHandler := auth.NewHandler(authService)
 
 	// --- catalog (categories + services, no dependencies) ---
 	catalogRepo := catalog.NewRepository(catalogdb.New(pool))
-	catalogService := catalog.NewService(catalogRepo)
+	catalogService := catalog.NewService(catalogRepo, cacheClient, logger)
 	catalogHandler := catalog.NewHandler(catalogService)
 	catalogAdapter := wiring.NewCatalogAdapter(catalogService)
 
@@ -104,6 +118,7 @@ func main() {
 		Logger:         logger,
 		Pool:           pool,
 		TokenService:   tokenService,
+		CacheClient:    cacheClient,
 		AuthHandler:    authHandler,
 		CatalogHandler: catalogHandler,
 		MasterHandler:  masterHandler,

@@ -24,6 +24,7 @@ type Offering struct {
 	PriceFrom   *float64
 	PriceTo     *float64
 	Unit        string
+	ImageURL    *string
 	Active      bool
 	CreatedAt   time.Time
 	UpdatedAt   time.Time

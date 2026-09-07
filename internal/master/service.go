@@ -44,7 +44,7 @@ func (s *Service) GetProfile(ctx context.Context, masterUserID int64) (ProfileDT
 // deliberately not created at registration time, so the foundational auth
 // domain never has to depend on master.
 func (s *Service) UpdateProfile(ctx context.Context, masterUserID int64, req UpdateProfileRequest) (ProfileDTO, error) {
-	if _, err := s.repo.UpsertProfile(ctx, masterUserID, strings.TrimSpace(req.City), strings.TrimSpace(req.Bio)); err != nil {
+	if _, err := s.repo.UpsertProfile(ctx, masterUserID, strings.TrimSpace(req.City), strings.TrimSpace(req.Bio), req.AvatarURL); err != nil {
 		return ProfileDTO{}, fmt.Errorf("upsert profile: %w", err)
 	}
 
@@ -100,4 +100,19 @@ func (s *Service) RecordReview(ctx context.Context, masterUserID int64, rating i
 		return fmt.Errorf("record review: %w", err)
 	}
 	return nil
+}
+
+// GetAvatarURL backs the request domain's SpecializationPort (see
+// internal/request/ports.go), which also enriches an offer DTO with the
+// bidding master's avatar. A master with no profile yet, or no avatar set,
+// both resolve to nil -- neither is an error worth surfacing.
+func (s *Service) GetAvatarURL(ctx context.Context, masterUserID int64) (*string, error) {
+	profile, err := s.repo.GetProfile(ctx, masterUserID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return profile.AvatarURL, nil
 }

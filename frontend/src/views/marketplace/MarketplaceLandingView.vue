@@ -377,12 +377,21 @@ function toggleFaq(i: number) {
           v-for="s in visibleServices"
           :key="s.id"
           type="button"
-          class="flex flex-col items-start gap-2 rounded-[18px] border border-l-[3px] border-[#E2DED2] border-l-[#5B4BE0] bg-white p-5 text-left transition-colors hover:border-[#17160F]"
+          class="flex flex-col items-start gap-3 overflow-hidden rounded-[18px] border border-l-[3px] border-[#E2DED2] border-l-[#5B4BE0] bg-white text-left transition-colors hover:border-[#17160F]"
           @click="startRequest(s.id)"
         >
-          <span class="text-base font-semibold">{{ s.name }}</span>
-          <span v-if="s.description" class="text-sm text-[#6E6B60]">{{ s.description }}</span>
-          <span class="mt-auto pt-2 text-sm font-medium text-[#5B4BE0]">Оставить заявку →</span>
+          <img
+            v-if="s.imageUrl"
+            :src="s.imageUrl"
+            :alt="s.name"
+            class="h-32 w-full object-cover"
+            loading="lazy"
+          />
+          <div class="flex flex-1 flex-col items-start gap-2 px-5 pb-5" :class="s.imageUrl ? 'pt-4' : 'pt-5'">
+            <span class="text-base font-semibold">{{ s.name }}</span>
+            <span v-if="s.description" class="text-sm text-[#6E6B60]">{{ s.description }}</span>
+            <span class="mt-auto pt-2 text-sm font-medium text-[#5B4BE0]">Оставить заявку →</span>
+          </div>
         </button>
       </div>
 

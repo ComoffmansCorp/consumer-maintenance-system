@@ -64,7 +64,7 @@ func (r *Repository) ListActiveCategories(ctx context.Context) ([]Category, erro
 	return out, nil
 }
 
-func (r *Repository) CreateService(ctx context.Context, categoryID int64, name, description string, priceFrom, priceTo *float64, unit string) (Offering, error) {
+func (r *Repository) CreateService(ctx context.Context, categoryID int64, name, description string, priceFrom, priceTo *float64, unit string, imageURL *string) (Offering, error) {
 	row, err := r.queriesFor(ctx).CreateService(ctx, db.CreateServiceParams{
 		CategoryID:  categoryID,
 		Name:        name,
@@ -72,6 +72,7 @@ func (r *Repository) CreateService(ctx context.Context, categoryID int64, name, 
 		PriceFrom:   priceFrom,
 		PriceTo:     priceTo,
 		Unit:        pgtype.Text{String: unit, Valid: unit != ""},
+		ImageUrl:    textOrNil(imageURL),
 	})
 	if err != nil {
 		return Offering{}, fmt.Errorf("create service: %w", err)
@@ -87,7 +88,7 @@ func (r *Repository) GetServiceByID(ctx context.Context, id int64) (Offering, er
 	return toOffering(row), nil
 }
 
-func (r *Repository) UpdateService(ctx context.Context, id int64, name, description string, priceFrom, priceTo *float64, unit string, active bool) (Offering, error) {
+func (r *Repository) UpdateService(ctx context.Context, id int64, name, description string, priceFrom, priceTo *float64, unit string, active bool, imageURL *string) (Offering, error) {
 	row, err := r.queriesFor(ctx).UpdateService(ctx, db.UpdateServiceParams{
 		ID:          id,
 		Name:        name,
@@ -96,6 +97,7 @@ func (r *Repository) UpdateService(ctx context.Context, id int64, name, descript
 		PriceTo:     priceTo,
 		Unit:        pgtype.Text{String: unit, Valid: unit != ""},
 		Active:      active,
+		ImageUrl:    textOrNil(imageURL),
 	})
 	if err != nil {
 		return Offering{}, fmt.Errorf("update service: %w", err)
@@ -146,6 +148,7 @@ func toOffering(row db.Service) Offering {
 		PriceFrom:   row.PriceFrom,
 		PriceTo:     row.PriceTo,
 		Unit:        unit,
+		ImageURL:    nilIfEmptyText(row.ImageUrl),
 		Active:      row.Active,
 		CreatedAt:   row.CreatedAt.Time,
 		UpdatedAt:   row.UpdatedAt.Time,
@@ -157,4 +160,22 @@ func int8OrNil(v *int64) pgtype.Int8 {
 		return pgtype.Int8{}
 	}
 	return pgtype.Int8{Int64: *v, Valid: true}
+}
+
+// textOrNil/nilIfEmptyText round-trip an optional string through
+// pgtype.Text -- same shape as int8OrNil above, for the nullable image/avatar
+// URL columns (image_url, avatar_url) that are genuinely optional rather
+// than "empty string means unset" like description/unit/city/bio.
+func textOrNil(v *string) pgtype.Text {
+	if v == nil || *v == "" {
+		return pgtype.Text{}
+	}
+	return pgtype.Text{String: *v, Valid: true}
+}
+
+func nilIfEmptyText(t pgtype.Text) *string {
+	if !t.Valid {
+		return nil
+	}
+	return &t.String
 }

@@ -1,17 +1,18 @@
 -- name: UpsertMasterProfile :one
-INSERT INTO master_profiles (user_id, city, bio)
-VALUES (@user_id, @city, @bio)
-ON CONFLICT (user_id) DO UPDATE SET city = excluded.city, bio = excluded.bio, updated_at = NOW()
-RETURNING user_id, city, bio, rating_avg, rating_count, created_at, updated_at;
+INSERT INTO master_profiles (user_id, city, bio, avatar_url)
+VALUES (@user_id, @city, @bio, @avatar_url)
+ON CONFLICT (user_id) DO UPDATE SET city = excluded.city, bio = excluded.bio,
+    avatar_url = excluded.avatar_url, updated_at = NOW()
+RETURNING user_id, city, bio, rating_avg, rating_count, created_at, updated_at, avatar_url;
 
 -- name: GetMasterProfile :one
-SELECT user_id, city, bio, rating_avg, rating_count, created_at, updated_at
+SELECT user_id, city, bio, rating_avg, rating_count, created_at, updated_at, avatar_url
 FROM master_profiles
 WHERE user_id = @user_id
 LIMIT 1;
 
 -- name: ListMasterProfiles :many
-SELECT user_id, city, bio, rating_avg, rating_count, created_at, updated_at
+SELECT user_id, city, bio, rating_avg, rating_count, created_at, updated_at, avatar_url
 FROM master_profiles
 ORDER BY rating_avg DESC, created_at DESC
 LIMIT @page_limit OFFSET @page_offset;
@@ -29,4 +30,4 @@ SET rating_avg = ROUND(((rating_avg * rating_count) + @rating::numeric) / (ratin
     rating_count = rating_count + 1,
     updated_at = NOW()
 WHERE user_id = @user_id
-RETURNING user_id, city, bio, rating_avg, rating_count, created_at, updated_at;
+RETURNING user_id, city, bio, rating_avg, rating_count, created_at, updated_at, avatar_url;

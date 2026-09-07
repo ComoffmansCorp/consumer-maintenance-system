@@ -22,6 +22,7 @@ type MasterProfile struct {
 	RatingCount int32              `json:"rating_count"`
 	CreatedAt   pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
+	AvatarUrl   pgtype.Text        `json:"avatar_url"`
 }
 
 type MasterSpecialization struct {
@@ -100,6 +101,7 @@ type Service struct {
 	Active      bool               `json:"active"`
 	CreatedAt   pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
+	ImageUrl    pgtype.Text        `json:"image_url"`
 }
 
 type ServiceCategory struct {

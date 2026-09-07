@@ -1,0 +1,13 @@
+# Grafana datasource provisioning -- picked up automatically on first boot
+# from /etc/grafana/provisioning/datasources (see the grafana service's
+# volumes in docker-compose.yml). No manual "Add data source" click needed.
+apiVersion: 1
+
+datasources:
+  - name: Prometheus
+    uid: prometheus
+    type: prometheus
+    access: proxy
+    url: http://prometheus:9090
+    isDefault: true
+    editable: true

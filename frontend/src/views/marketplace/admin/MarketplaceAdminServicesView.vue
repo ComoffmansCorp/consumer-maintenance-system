@@ -96,9 +96,18 @@ async function toggleActive(svc: ServiceDTO) {
       </div>
       <div v-else class="mt-6 flex flex-col gap-3">
         <div v-for="svc in services" :key="svc.id" class="flex items-center justify-between rounded-2xl border border-[#E2DED2] bg-white p-5">
-          <div>
-            <p class="text-sm font-medium">{{ svc.name }}</p>
-            <p class="mt-0.5 text-xs text-[#9B978A]">{{ categoryName(svc.categoryId) }} · {{ svc.priceFrom ?? '—' }}–{{ svc.priceTo ?? '—' }} ₽{{ svc.unit ? ` / ${svc.unit}` : '' }}</p>
+          <div class="flex items-center gap-3">
+            <img
+              v-if="svc.imageUrl"
+              :src="svc.imageUrl"
+              alt=""
+              class="h-11 w-11 shrink-0 rounded-lg object-cover"
+            />
+            <div v-else class="h-11 w-11 shrink-0 rounded-lg bg-[#EFEBE1]" />
+            <div>
+              <p class="text-sm font-medium">{{ svc.name }}</p>
+              <p class="mt-0.5 text-xs text-[#9B978A]">{{ categoryName(svc.categoryId) }} · {{ svc.priceFrom ?? '—' }}–{{ svc.priceTo ?? '—' }} ₽{{ svc.unit ? ` / ${svc.unit}` : '' }}</p>
+            </div>
           </div>
           <button type="button" class="rounded-[11px] border border-[#E2DED2] px-3 py-2 text-sm hover:border-[#17160F]" @click="toggleActive(svc)">
             {{ svc.active ? 'Скрыть' : 'Включить' }}
