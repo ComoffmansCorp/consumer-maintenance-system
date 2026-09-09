@@ -64,6 +64,9 @@ log/
 build/
 bin/
 
+### Backups (make backup / make restore) ###
+backups/
+
 ### Temporary ###
 *.tmp
 *.temp
