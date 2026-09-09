@@ -1,0 +1,45 @@
+# Ships `app`'s structured JSON logs (already slog-formatted, see
+# internal/platform/middleware/logging.go) into ClickHouse. No app code
+# touched at all -- Vector reads container stdout via the Docker API.
+#
+# This host's Docker daemon is a SHARED Avito devenv Lima VM running many
+# unrelated containers/pods (confirmed via `docker ps` earlier in this
+# project) -- include_labels below is deliberately scoped to both this
+# compose project AND the `app` service specifically, not a bare
+# docker_logs source with no filter, which would ingest logs from
+# unrelated work containers on the same host.
+sources:
+  docker_app:
+    type: docker_logs
+    include_labels:
+      - "com.docker.compose.project=consumer-maintenance-system"
+      - "com.docker.compose.service=app"
+
+transforms:
+  parse_app_logs:
+    type: remap
+    inputs:
+      - docker_app
+    source: |
+      raw_line = to_string(.message) ?? ""
+      parsed, err = parse_json(raw_line)
+      if err == null {
+        . = merge(., object!(parsed))
+      }
+      .raw = raw_line
+
+sinks:
+  clickhouse:
+    type: clickhouse
+    inputs:
+      - parse_app_logs
+    endpoint: "http://clickhouse:8123"
+    database: logs
+    table: app_logs
+    skip_unknown_fields: true
+    auth:
+      strategy: basic
+      user: default
+      password: clickhouse
+    batch:
+      timeout_secs: 2

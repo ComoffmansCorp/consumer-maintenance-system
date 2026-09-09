@@ -93,7 +93,7 @@ func main() {
 	paymentService.RegisterHandlers(eventBus)
 
 	chatRepo := chat.NewRepository(chatdb.New(pool))
-	chatService := chat.NewService(chatRepo, requestAdapter)
+	chatService := chat.NewService(chatRepo, requestAdapter, eventBus)
 
 	s := &seeder{
 		ctx: ctx, logger: logger, pool: pool,
@@ -344,9 +344,12 @@ func (s *seeder) seedUsersAndRequests(serviceIDsByName map[string]int64) error {
 			specIDs = append(specIDs, id)
 			serviceToMasters[id] = append(serviceToMasters[id], resp.UserID)
 		}
-		// i.pravatar.cc/300?u=<username> is deterministic and keyless: the
-		// same username always resolves to the same avatar across reseeds.
-		avatarURL := fmt.Sprintf("https://i.pravatar.cc/300?u=%s", ms.username)
+		// Served from the app's own MinIO bucket (see docker-compose.yml
+		// minio-init) rather than an external CDN -- i.pravatar.cc has no
+		// uptime/availability guarantee, and defense-day may be on a
+		// network that blocks it outright. File is named after the
+		// username 1:1, uploaded from frontend/public/images/masters/.
+		avatarURL := fmt.Sprintf("/media/masters/%s.jpg", ms.username)
 		if _, err := s.master.UpdateProfile(ctx, resp.UserID, master.UpdateProfileRequest{
 			City: ms.city, Bio: ms.bio, AvatarURL: &avatarURL, SpecializationIDs: specIDs,
 		}); err != nil {
@@ -603,10 +606,14 @@ func (s *seeder) seedCategory(cat categorySeed, parentID *int64, serviceIDsByNam
 
 	for _, svc := range cat.services {
 		priceFrom, priceTo := svc.priceFrom, svc.priceTo
-		// picsum.photos/seed/<slug>/... is deterministic: the same service
-		// name always resolves to the same picture across reseeds, and the
-		// URL itself needs no network access to produce.
-		imageURL := fmt.Sprintf("https://picsum.photos/seed/%s/480/320", imageSlug(svc.name))
+		// Served from the app's own MinIO bucket (see docker-compose.yml
+		// minio-init), not picsum.photos -- that CDN geo-blocked this
+		// environment outright on burst traffic during testing, so it's
+		// not something a defense-day demo can depend on either. Each
+		// service gets its own hand-made category-themed SVG, uploaded
+		// from frontend/public/images/services/<slug>.svg (imageSlug keeps
+		// this filename deterministic across reseeds, same as before).
+		imageURL := fmt.Sprintf("/media/services/%s.svg", imageSlug(svc.name))
 		createdSvc, err := s.catalog.CreateService(ctx, catalog.CreateServiceRequest{
 			CategoryID: created.ID, Name: svc.name, Description: svc.description,
 			PriceFrom: &priceFrom, PriceTo: &priceTo, Unit: svc.unit, ImageURL: &imageURL,

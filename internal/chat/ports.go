@@ -10,4 +10,10 @@ import "context"
 // request.Service.
 type RequestPort interface {
 	GetParticipants(ctx context.Context, requestID int64) (clientID int64, masterID *int64, found bool, err error)
+
+	// ListParticipantRequestIDs backs the unread-message badge: every
+	// request a user is party to (as client or assigned master), so the
+	// chat domain knows which threads to check for unread messages
+	// without duplicating request ownership data of its own.
+	ListParticipantRequestIDs(ctx context.Context, userID int64) ([]int64, error)
 }

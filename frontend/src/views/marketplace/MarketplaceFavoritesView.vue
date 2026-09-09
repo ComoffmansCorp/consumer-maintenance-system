@@ -1,13 +1,15 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
-import { requestsApi } from '@/api/marketplace'
+import { masterApi, requestsApi } from '@/api/marketplace'
 import { extractErrorMessage } from '@/api/client'
 import { useToastStore } from '@/stores/toast'
-import type { FavoriteDTO } from '@/types'
+import type { FavoriteDTO, ProfileDTO } from '@/types'
 import MarketplaceShell from '@/components/layout/MarketplaceShell.vue'
+import Skeleton from '@/components/Skeleton.vue'
 
 const toast = useToastStore()
 const items = ref<FavoriteDTO[]>([])
+const profiles = ref<Record<number, ProfileDTO>>({})
 const loading = ref(true)
 const error = ref('')
 
@@ -16,6 +18,12 @@ async function load() {
   error.value = ''
   try {
     items.value = await requestsApi.listFavorites()
+    // Best-effort enrichment -- a favorite whose master profile 404s (e.g.
+    // account since removed) still renders, just falls back to "Мастер #id".
+    const results = await Promise.allSettled(items.value.map((f) => masterApi.getPublicProfile(f.masterId)))
+    results.forEach((res, i) => {
+      if (res.status === 'fulfilled') profiles.value[items.value[i].masterId] = res.value
+    })
   } catch (e) {
     error.value = extractErrorMessage(e)
   } finally {
@@ -40,7 +48,9 @@ async function remove(masterId: number) {
     <div class="mx-auto max-w-[820px]">
       <h1 class="mk-display text-2xl font-bold tracking-tight">Избранные мастера</h1>
 
-      <div v-if="loading" class="py-16 text-center text-sm text-[#8D8A7E]">Загрузка…</div>
+      <div v-if="loading" class="mt-6 flex flex-col gap-3">
+        <Skeleton v-for="i in 3" :key="i" class="h-[68px]" rounded="rounded-2xl" />
+      </div>
       <div v-else-if="error" class="mt-6 rounded-2xl border border-[#F3D3CE] bg-[#FBF0EE] px-6 py-10 text-center">
         <p class="text-sm font-medium text-[#B3261E]">{{ error }}</p>
       </div>
@@ -53,7 +63,19 @@ async function remove(masterId: number) {
           :key="f.masterId"
           class="flex items-center justify-between rounded-2xl border border-[#E2DED2] bg-white p-5"
         >
-          <span class="text-sm font-medium">Мастер #{{ f.masterId }}</span>
+          <RouterLink
+            :to="{ name: 'marketplace-master-profile', params: { id: f.masterId } }"
+            class="flex items-center gap-3 text-sm font-medium hover:text-[#5B4BE0]"
+          >
+            <img
+              v-if="profiles[f.masterId]?.avatarUrl"
+              :src="profiles[f.masterId].avatarUrl"
+              alt=""
+              class="h-9 w-9 rounded-full object-cover"
+            />
+            <div v-else class="h-9 w-9 rounded-full bg-[#EFEBE1]" />
+            {{ profiles[f.masterId]?.fullName || `Мастер #${f.masterId}` }}
+          </RouterLink>
           <button
             type="button"
             class="rounded-[11px] border border-[#B3261E] px-3 py-2 text-sm text-[#B3261E] hover:bg-[#FBF0EE]"

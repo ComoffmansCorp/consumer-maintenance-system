@@ -34,6 +34,7 @@ type Dependencies struct {
 	ReviewHandler  *review.Handler
 	PaymentHandler *payment.Handler
 	ChatHandler    *chat.Handler
+	ChatWSHandler  *chat.WSHandler
 	CORSOrigins    []string
 }
 
@@ -53,12 +54,21 @@ func NewRouter(deps Dependencies) http.Handler {
 	r.Get("/health/ready", health.Readiness)
 	r.Handle("/metrics", observability.MetricsHandler())
 
-	// GET /api/masters/{id}/reviews is public but carries a path parameter,
-	// which JWTAuth's publicPaths map (exact-string match only, see below)
-	// cannot express. Registered directly here, outside the /api group's
-	// JWTAuth middleware entirely -- the same pattern already used for
-	// health/metrics above.
+	// Public master directory/profile + reviews -- carries a path parameter
+	// (or, for the list, needs no auth at all), which JWTAuth's publicPaths
+	// map (exact-string match only, see below) cannot express. Registered
+	// directly here, outside the /api group's JWTAuth middleware entirely --
+	// the same pattern already used for health/metrics above.
+	r.Get("/api/masters", deps.MasterHandler.ListPublicProfiles)
+	r.Get("/api/masters/{id}", deps.MasterHandler.GetPublicProfile)
 	r.Get("/api/masters/{id}/reviews", deps.ReviewHandler.ListMasterReviews)
+
+	// Chat WebSocket: authenticates itself via a ?token= query param (see
+	// WSHandler.Serve), not the JWTAuth middleware below -- a browser
+	// WebSocket handshake can't set a custom Authorization header, so this
+	// route has to sit outside the /api group's middleware chain the same
+	// way the two routes above do.
+	r.Get("/api/requests/{id}/messages/ws", deps.ChatWSHandler.Serve)
 
 	publicPaths := map[string]struct{}{
 		"/api/auth/login":                 {},
@@ -113,6 +123,8 @@ func NewRouter(deps Dependencies) http.Handler {
 		api.Get("/requests/{id}/payment", deps.PaymentHandler.GetForRequest)
 		api.Get("/requests/{id}/messages", deps.ChatHandler.ListMessages)
 		api.Post("/requests/{id}/messages", deps.ChatHandler.SendMessage)
+		api.Post("/requests/{id}/messages/read", deps.ChatHandler.MarkRead)
+		api.Get("/requests/unread-count", deps.ChatHandler.UnreadCount)
 
 		// Cross-cutting admin dashboards live under one shared /api/admin
 		// namespace rather than nested inside each domain's own mount --

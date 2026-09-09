@@ -60,6 +60,14 @@ func (r *Repository) ListByClient(ctx context.Context, clientID int64, limit, of
 	return toRequests(rows), nil
 }
 
+func (r *Repository) ListParticipantRequestIDs(ctx context.Context, userID int64) ([]int64, error) {
+	ids, err := r.queriesFor(ctx).ListParticipantRequestIDs(ctx, userID)
+	if err != nil {
+		return nil, fmt.Errorf("list participant request ids: %w", err)
+	}
+	return ids, nil
+}
+
 func (r *Repository) CountByClient(ctx context.Context, clientID int64) (int64, error) {
 	count, err := r.queriesFor(ctx).CountRequestsByClient(ctx, clientID)
 	if err != nil {

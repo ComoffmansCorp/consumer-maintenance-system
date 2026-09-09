@@ -351,6 +351,12 @@ func (s *Service) ListFavorites(ctx context.Context, clientID int64) ([]Favorite
 // wrapped by wiring adapters that satisfy each consumer's own port
 // interface -- request never imports them back. ---
 
+// ListParticipantRequestIDs backs chat.RequestPort -- see that interface
+// for why chat needs this rather than owning participant data itself.
+func (s *Service) ListParticipantRequestIDs(ctx context.Context, userID int64) ([]int64, error) {
+	return s.repo.ListParticipantRequestIDs(ctx, userID)
+}
+
 // GetParticipants returns who a request belongs to, for authorization
 // checks in the payment and chat domains.
 func (s *Service) GetParticipants(ctx context.Context, requestID int64) (clientID int64, masterID *int64, err error) {

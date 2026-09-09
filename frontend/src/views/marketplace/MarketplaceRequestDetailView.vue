@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref } from 'vue'
 import { requestsApi, paymentsApi, reviewsApi, chatApi } from '@/api/marketplace'
-import { extractErrorMessage } from '@/api/client'
+import { extractErrorMessage, getAccessToken } from '@/api/client'
 import { useToastStore } from '@/stores/toast'
 import { useAuthStore } from '@/stores/auth'
 import type { RequestDTO, OfferDTO, PaymentDTO, MessageDTO } from '@/types'
 import MarketplaceShell from '@/components/layout/MarketplaceShell.vue'
+import RequestStatusStepper from '@/components/RequestStatusStepper.vue'
+import Skeleton from '@/components/Skeleton.vue'
 
 const requestStatusLabels: Record<string, string> = {
   OPEN: 'Открыта',
@@ -44,6 +46,7 @@ const working = ref(false)
 const messages = ref<MessageDTO[]>([])
 const newMessage = ref('')
 let chatTimer: ReturnType<typeof setInterval> | null = null
+let chatSocket: WebSocket | null = null
 
 async function pollMessages() {
   if (!request.value) return
@@ -55,9 +58,40 @@ async function pollMessages() {
   }
 }
 
-function startChatPolling() {
+function appendLiveMessage(dto: MessageDTO) {
+  // The poll fallback below can land the same message the socket already
+  // pushed (or vice versa) -- dedupe by id rather than assume exactly one
+  // delivery path is active.
+  if (messages.value.some((m) => m.id === dto.id)) return
+  messages.value = [...messages.value, dto].sort((a, b) => a.id - b.id)
+}
+
+// Real-time via WebSocket, with the previous 5s poll kept running as a
+// fallback underneath it -- not just as a belt-and-suspenders instinct:
+// this is a genuine graceful-degradation path. If the socket never
+// connects (e.g. a proxy in between that strips Upgrade headers) or drops
+// and doesn't come back, the poll loop means chat still works, just back
+// to 5s-latency instead of instant. No error state, no broken feature.
+function startChatSocket(requestId: number) {
+  const token = getAccessToken()
+  if (!token) return
+  const scheme = window.location.protocol === 'https:' ? 'wss' : 'ws'
+  const url = `${scheme}://${window.location.host}/api/requests/${requestId}/messages/ws?token=${encodeURIComponent(token)}`
+  const socket = new WebSocket(url)
+  socket.onmessage = (event) => {
+    try {
+      appendLiveMessage(JSON.parse(event.data) as MessageDTO)
+    } catch {
+      // Malformed frame -- ignore, the poll fallback will catch up regardless.
+    }
+  }
+  chatSocket = socket
+}
+
+function startChatPolling(requestId: number) {
   pollMessages()
   chatTimer = setInterval(pollMessages, 5000)
+  startChatSocket(requestId)
 }
 
 async function sendMessage() {
@@ -65,7 +99,10 @@ async function sendMessage() {
   try {
     await chatApi.send(request.value.id, newMessage.value.trim())
     newMessage.value = ''
-    await pollMessages()
+    // Not awaiting a re-poll here on purpose -- the socket (or, absent
+    // that, the next 5s poll tick) is what actually appends this message,
+    // same as it would for the other participant's messages. Keeps there
+    // being exactly one code path that adds messages to the list.
   } catch (e) {
     toast.error(extractErrorMessage(e))
   }
@@ -73,6 +110,7 @@ async function sendMessage() {
 
 onUnmounted(() => {
   if (chatTimer) clearInterval(chatTimer)
+  chatSocket?.close()
 })
 
 async function load() {
@@ -87,7 +125,10 @@ async function load() {
       payment.value = await paymentsApi.getForRequest(request.value.id).catch(() => null)
     }
     if (request.value.masterId) {
-      startChatPolling()
+      startChatPolling(request.value.id)
+      // Best-effort, same as polling itself -- opening the thread is what
+      // "read" means here, a failed mark-read call shouldn't block the page.
+      chatApi.markRead(request.value.id).catch(() => {})
     }
   } catch (e) {
     error.value = extractErrorMessage(e)
@@ -160,12 +201,9 @@ function formatDateTime(iso?: string) {
 <template>
   <MarketplaceShell>
     <div class="mx-auto max-w-lg">
-      <div v-if="loading" class="flex items-center justify-center gap-2 py-16 text-sm text-[#8D8A7E]">
-        <svg class="h-4 w-4 animate-spin motion-reduce:animate-none" viewBox="0 0 24 24" fill="none">
-          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
-          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
-        </svg>
-        Загрузка…
+      <div v-if="loading" class="flex flex-col gap-4">
+        <Skeleton class="h-8 w-2/3" />
+        <Skeleton class="h-40" rounded="rounded-2xl" />
       </div>
 
       <div v-else-if="error" class="flex flex-col items-center gap-3 rounded-2xl border border-[#F3D3CE] bg-[#FBF0EE] px-6 py-10 text-center">
@@ -187,6 +225,8 @@ function formatDateTime(iso?: string) {
           </span>
         </div>
 
+        <RequestStatusStepper :status="request.status" class="mt-5" />
+
         <div class="mt-6 grid grid-cols-1 gap-4 rounded-2xl border border-[#E2DED2] bg-white p-6 sm:grid-cols-2">
           <div class="sm:col-span-2">
             <p class="font-mono text-[11px] uppercase tracking-[0.1em] text-[#9B978A]">Описание</p>
@@ -198,7 +238,16 @@ function formatDateTime(iso?: string) {
           </div>
           <div>
             <p class="font-mono text-[11px] uppercase tracking-[0.1em] text-[#9B978A]">Мастер</p>
-            <p class="mt-1 text-sm">{{ request.masterId ? `Мастер #${request.masterId}` : 'Ещё не назначен' }}</p>
+            <p class="mt-1 text-sm">
+              <RouterLink
+                v-if="request.masterId"
+                :to="{ name: 'marketplace-master-profile', params: { id: request.masterId } }"
+                class="text-[#5B4BE0] hover:underline"
+              >
+                Профиль мастера →
+              </RouterLink>
+              <template v-else>Ещё не назначен</template>
+            </p>
           </div>
           <div>
             <p class="font-mono text-[11px] uppercase tracking-[0.1em] text-[#9B978A]">Создана</p>
@@ -232,15 +281,25 @@ function formatDateTime(iso?: string) {
               class="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[#E2DED2] px-4 py-3"
             >
               <div class="flex items-center gap-3">
-                <img
-                  v-if="offer.masterAvatarUrl"
-                  :src="offer.masterAvatarUrl"
-                  alt=""
-                  class="h-9 w-9 shrink-0 rounded-full object-cover"
-                />
-                <div v-else class="h-9 w-9 shrink-0 rounded-full bg-[#EFEBE1]" />
+                <RouterLink :to="{ name: 'marketplace-master-profile', params: { id: offer.masterId } }">
+                  <img
+                    v-if="offer.masterAvatarUrl"
+                    :src="offer.masterAvatarUrl"
+                    alt=""
+                    class="h-9 w-9 shrink-0 rounded-full object-cover"
+                  />
+                  <div v-else class="h-9 w-9 shrink-0 rounded-full bg-[#EFEBE1]" />
+                </RouterLink>
                 <div>
-                  <p class="text-sm font-medium">{{ offer.price }} ₽ — мастер #{{ offer.masterId }}</p>
+                  <p class="text-sm font-medium">
+                    {{ offer.price }} ₽ —
+                    <RouterLink
+                      :to="{ name: 'marketplace-master-profile', params: { id: offer.masterId } }"
+                      class="text-[#5B4BE0] hover:underline"
+                    >
+                      профиль мастера
+                    </RouterLink>
+                  </p>
                   <p v-if="offer.comment" class="mt-0.5 text-sm text-[#6E6B60]">{{ offer.comment }}</p>
                 </div>
               </div>

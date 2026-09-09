@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="420" height="440" viewBox="0 0 420 440">
+  <rect width="420" height="440" fill="none"/>
+
+  <!-- phone frame -->
+  <rect x="90" y="10" width="220" height="420" rx="34" fill="#17160F"/>
+  <rect x="100" y="24" width="200" height="392" rx="24" fill="#FBFAF7"/>
+  <rect x="170" y="30" width="60" height="10" rx="5" fill="#17160F"/>
+
+  <!-- status bar -->
+  <text x="118" y="56" font-family="sans-serif" font-size="11" fill="#8D8A7E">9:41</text>
+
+  <!-- header -->
+  <text x="118" y="86" font-family="Georgia, serif" font-weight="700" font-size="18" fill="#17160F">Доступные заявки</text>
+  <rect x="118" y="98" width="60" height="4" rx="2" fill="#5B4BE0"/>
+
+  <!-- card 1 -->
+  <rect x="112" y="118" width="196" height="82" rx="14" fill="#FFFFFF" stroke="#E2DED2"/>
+  <rect x="126" y="132" width="70" height="16" rx="8" fill="#EFE9FF"/>
+  <text x="132" y="144" font-family="sans-serif" font-size="9" fill="#5B4BE0">Электрика</text>
+  <text x="126" y="168" font-family="sans-serif" font-weight="600" font-size="13" fill="#17160F">Замена проводки</text>
+  <text x="126" y="186" font-family="sans-serif" font-size="11" fill="#8D8A7E">от 5000 &#8381;  ·  Самара</text>
+  <circle cx="278" cy="159" r="16" fill="#5B4BE0"/>
+  <path d="M272 159 l4 4 l8 -9" stroke="#FBFAF7" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- card 2 -->
+  <rect x="112" y="212" width="196" height="82" rx="14" fill="#FFFFFF" stroke="#E2DED2"/>
+  <rect x="126" y="226" width="86" height="16" rx="8" fill="#E9F7F0"/>
+  <text x="132" y="238" font-family="sans-serif" font-size="9" fill="#2E8B6B">Сантехника</text>
+  <text x="126" y="262" font-family="sans-serif" font-weight="600" font-size="13" fill="#17160F">Устранение течи</text>
+  <text x="126" y="280" font-family="sans-serif" font-size="11" fill="#8D8A7E">от 800 &#8381;  ·  Тольятти</text>
+  <circle cx="278" cy="253" r="16" fill="#EFEDE3"/>
+  <text x="278" y="257" font-family="sans-serif" font-size="12" fill="#8D8A7E" text-anchor="middle">+</text>
+
+  <!-- card 3 (partially visible) -->
+  <rect x="112" y="306" width="196" height="60" rx="14" fill="#FFFFFF" stroke="#E2DED2"/>
+  <rect x="126" y="320" width="66" height="16" rx="8" fill="#FFF4E3"/>
+  <text x="132" y="332" font-family="sans-serif" font-size="9" fill="#B8791E">Клининг</text>
+  <text x="126" y="354" font-family="sans-serif" font-weight="600" font-size="13" fill="#17160F">Мытьё окон</text>
+
+  <!-- bottom nav -->
+  <rect x="100" y="382" width="200" height="34" fill="#FBFAF7"/>
+  <circle cx="150" cy="399" r="4" fill="#5B4BE0"/>
+  <circle cx="200" cy="399" r="4" fill="#DDD8CC"/>
+  <circle cx="250" cy="399" r="4" fill="#DDD8CC"/>
+</svg>

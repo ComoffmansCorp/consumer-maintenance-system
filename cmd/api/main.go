@@ -111,8 +111,11 @@ func main() {
 
 	// --- chat (depends on request for participant/assignment checks) ---
 	chatRepo := chat.NewRepository(chatdb.New(pool))
-	chatService := chat.NewService(chatRepo, requestAdapter)
+	chatService := chat.NewService(chatRepo, requestAdapter, eventBus)
 	chatHandler := chat.NewHandler(chatService)
+	chatHub := chat.NewHub()
+	chatHub.Subscribe(eventBus)
+	chatWSHandler := chat.NewWSHandler(chatService, chatHub, tokenService, cacheClient)
 
 	router := server.NewRouter(server.Dependencies{
 		Logger:         logger,
@@ -126,6 +129,7 @@ func main() {
 		ReviewHandler:  reviewHandler,
 		PaymentHandler: paymentHandler,
 		ChatHandler:    chatHandler,
+		ChatWSHandler:  chatWSHandler,
 		CORSOrigins:    cfg.CORSAllowedOrigins,
 	})
 

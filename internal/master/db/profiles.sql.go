@@ -24,15 +24,29 @@ func (q *Queries) CountMasterProfiles(ctx context.Context) (int64, error) {
 }
 
 const getMasterProfile = `-- name: GetMasterProfile :one
-SELECT user_id, city, bio, rating_avg, rating_count, created_at, updated_at, avatar_url
-FROM master_profiles
-WHERE user_id = $1
+SELECT mp.user_id, mp.city, mp.bio, mp.rating_avg, mp.rating_count, mp.created_at, mp.updated_at, mp.avatar_url,
+       u.full_name
+FROM master_profiles mp
+JOIN users u ON u.id = mp.user_id
+WHERE mp.user_id = $1
 LIMIT 1
 `
 
-func (q *Queries) GetMasterProfile(ctx context.Context, userID int64) (MasterProfile, error) {
+type GetMasterProfileRow struct {
+	UserID      int64              `json:"user_id"`
+	City        pgtype.Text        `json:"city"`
+	Bio         pgtype.Text        `json:"bio"`
+	RatingAvg   float64            `json:"rating_avg"`
+	RatingCount int32              `json:"rating_count"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
+	AvatarUrl   pgtype.Text        `json:"avatar_url"`
+	FullName    pgtype.Text        `json:"full_name"`
+}
+
+func (q *Queries) GetMasterProfile(ctx context.Context, userID int64) (GetMasterProfileRow, error) {
 	row := q.db.QueryRow(ctx, getMasterProfile, userID)
-	var i MasterProfile
+	var i GetMasterProfileRow
 	err := row.Scan(
 		&i.UserID,
 		&i.City,
@@ -42,14 +56,17 @@ func (q *Queries) GetMasterProfile(ctx context.Context, userID int64) (MasterPro
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.AvatarUrl,
+		&i.FullName,
 	)
 	return i, err
 }
 
 const listMasterProfiles = `-- name: ListMasterProfiles :many
-SELECT user_id, city, bio, rating_avg, rating_count, created_at, updated_at, avatar_url
-FROM master_profiles
-ORDER BY rating_avg DESC, created_at DESC
+SELECT mp.user_id, mp.city, mp.bio, mp.rating_avg, mp.rating_count, mp.created_at, mp.updated_at, mp.avatar_url,
+       u.full_name
+FROM master_profiles mp
+JOIN users u ON u.id = mp.user_id
+ORDER BY mp.rating_avg DESC, mp.created_at DESC
 LIMIT $2 OFFSET $1
 `
 
@@ -58,15 +75,27 @@ type ListMasterProfilesParams struct {
 	PageLimit  int32 `json:"page_limit"`
 }
 
-func (q *Queries) ListMasterProfiles(ctx context.Context, arg ListMasterProfilesParams) ([]MasterProfile, error) {
+type ListMasterProfilesRow struct {
+	UserID      int64              `json:"user_id"`
+	City        pgtype.Text        `json:"city"`
+	Bio         pgtype.Text        `json:"bio"`
+	RatingAvg   float64            `json:"rating_avg"`
+	RatingCount int32              `json:"rating_count"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
+	AvatarUrl   pgtype.Text        `json:"avatar_url"`
+	FullName    pgtype.Text        `json:"full_name"`
+}
+
+func (q *Queries) ListMasterProfiles(ctx context.Context, arg ListMasterProfilesParams) ([]ListMasterProfilesRow, error) {
 	rows, err := q.db.Query(ctx, listMasterProfiles, arg.PageOffset, arg.PageLimit)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	items := []MasterProfile{}
+	items := []ListMasterProfilesRow{}
 	for rows.Next() {
-		var i MasterProfile
+		var i ListMasterProfilesRow
 		if err := rows.Scan(
 			&i.UserID,
 			&i.City,
@@ -76,6 +105,7 @@ func (q *Queries) ListMasterProfiles(ctx context.Context, arg ListMasterProfiles
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.AvatarUrl,
+			&i.FullName,
 		); err != nil {
 			return nil, err
 		}

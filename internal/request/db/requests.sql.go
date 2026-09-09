@@ -289,6 +289,36 @@ func (q *Queries) ListOpenRequestsForMaster(ctx context.Context, arg ListOpenReq
 	return items, nil
 }
 
+const listParticipantRequestIDs = `-- name: ListParticipantRequestIDs :many
+SELECT id
+FROM service_requests
+WHERE client_id = $1 OR master_id = $1
+`
+
+// Every request a user is party to, as either client or assigned master --
+// backs the chat domain's unread-message count, which needs "which of my
+// requests might have new messages" without duplicating request ownership
+// data into the chat domain itself.
+func (q *Queries) ListParticipantRequestIDs(ctx context.Context, userID int64) ([]int64, error) {
+	rows, err := q.db.Query(ctx, listParticipantRequestIDs, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []int64{}
+	for rows.Next() {
+		var id int64
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		items = append(items, id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listRequestsAdmin = `-- name: ListRequestsAdmin :many
 SELECT id, client_id, service_id, description, address_text, latitude, longitude, status, master_id,
     agreed_price, cancel_reason, created_at, updated_at

@@ -6,15 +6,19 @@ ON CONFLICT (user_id) DO UPDATE SET city = excluded.city, bio = excluded.bio,
 RETURNING user_id, city, bio, rating_avg, rating_count, created_at, updated_at, avatar_url;
 
 -- name: GetMasterProfile :one
-SELECT user_id, city, bio, rating_avg, rating_count, created_at, updated_at, avatar_url
-FROM master_profiles
-WHERE user_id = @user_id
+SELECT mp.user_id, mp.city, mp.bio, mp.rating_avg, mp.rating_count, mp.created_at, mp.updated_at, mp.avatar_url,
+       u.full_name
+FROM master_profiles mp
+JOIN users u ON u.id = mp.user_id
+WHERE mp.user_id = @user_id
 LIMIT 1;
 
 -- name: ListMasterProfiles :many
-SELECT user_id, city, bio, rating_avg, rating_count, created_at, updated_at, avatar_url
-FROM master_profiles
-ORDER BY rating_avg DESC, created_at DESC
+SELECT mp.user_id, mp.city, mp.bio, mp.rating_avg, mp.rating_count, mp.created_at, mp.updated_at, mp.avatar_url,
+       u.full_name
+FROM master_profiles mp
+JOIN users u ON u.id = mp.user_id
+ORDER BY mp.rating_avg DESC, mp.created_at DESC
 LIMIT @page_limit OFFSET @page_offset;
 
 -- name: CountMasterProfiles :one

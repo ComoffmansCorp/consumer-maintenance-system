@@ -5,6 +5,7 @@ import { requestsApi } from '@/api/marketplace'
 import type { RequestDTO } from '@/types'
 import { extractErrorMessage } from '@/api/client'
 import MarketplaceShell from '@/components/layout/MarketplaceShell.vue'
+import Skeleton from '@/components/Skeleton.vue'
 
 const requestStatusLabels: Record<string, string> = {
   OPEN: 'Открыта',
@@ -68,12 +69,8 @@ function formatDate(iso: string) {
         </button>
       </div>
 
-      <div v-if="loading" class="flex items-center justify-center gap-2 py-16 text-sm text-[#8D8A7E]">
-        <svg class="h-4 w-4 animate-spin motion-reduce:animate-none" viewBox="0 0 24 24" fill="none">
-          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
-          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
-        </svg>
-        Загрузка…
+      <div v-if="loading" class="mt-6 flex flex-col gap-3">
+        <Skeleton v-for="i in 4" :key="i" class="h-[84px]" rounded="rounded-2xl" />
       </div>
 
       <div v-else-if="error" class="mt-6 flex flex-col items-center gap-3 rounded-2xl border border-[#F3D3CE] bg-[#FBF0EE] px-6 py-10 text-center">

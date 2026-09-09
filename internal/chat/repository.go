@@ -48,6 +48,25 @@ func (r *Repository) ListSince(ctx context.Context, requestID, sinceID int64, li
 	return out, nil
 }
 
+func (r *Repository) MarkRead(ctx context.Context, requestID, readerID int64) error {
+	if err := r.queriesFor(ctx).MarkMessagesRead(ctx, db.MarkMessagesReadParams{
+		RequestID: requestID, ReaderID: readerID,
+	}); err != nil {
+		return fmt.Errorf("mark messages read: %w", err)
+	}
+	return nil
+}
+
+func (r *Repository) CountUnreadRequestIDs(ctx context.Context, requestIDs []int64, readerID int64) (int64, error) {
+	count, err := r.queriesFor(ctx).CountUnreadRequestIDs(ctx, db.CountUnreadRequestIDsParams{
+		RequestIds: requestIDs, ReaderID: readerID,
+	})
+	if err != nil {
+		return 0, fmt.Errorf("count unread request ids: %w", err)
+	}
+	return count, nil
+}
+
 func toMessage(row db.Message) Message {
 	var readAt *time.Time
 	if row.ReadAt.Valid {

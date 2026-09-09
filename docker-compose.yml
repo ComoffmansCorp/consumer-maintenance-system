@@ -107,6 +107,7 @@ services:
       dockerfile: Dockerfile
     depends_on:
       - app
+      - minio
     ports:
       - "5173:80"
 
@@ -170,12 +171,15 @@ services:
   # Default admin/admin credentials -- fine for a local demo stack, change
   # before exposing this anywhere real. Datasource + dashboard are
   # provisioned automatically from ./observability/grafana on first boot,
-  # no manual UI setup needed.
+  # no manual UI setup needed. GF_INSTALL_PLUGINS pulls the official
+  # ClickHouse datasource plugin so app_logs (below) is queryable from
+  # Grafana too, not just Prometheus metrics.
   grafana:
     image: grafana/grafana
     environment:
       GF_SECURITY_ADMIN_USER: admin
       GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_INSTALL_PLUGINS: grafana-clickhouse-datasource
     volumes:
       - ./observability/grafana/provisioning:/etc/grafana/provisioning:ro
       - ./observability/grafana/dashboards:/var/lib/grafana/dashboards:ro
@@ -184,9 +188,94 @@ services:
       - "3000:3000"
     depends_on:
       - prometheus
+      - clickhouse
+
+  # Log storage. Structured JSON logs (internal/platform/middleware/logging.go)
+  # land here via the `vector` shipper below -- app code itself never talks
+  # to ClickHouse directly, it just logs to stdout like always.
+  clickhouse:
+    image: clickhouse/clickhouse-server:24.8
+    environment:
+      # Without these, the entrypoint disables network access entirely for
+      # the `default` user (security default on recent images) -- every
+      # HTTP request, including from Vector/Grafana on the same Docker
+      # network, comes back 403 rather than actually connecting.
+      CLICKHOUSE_USER: default
+      CLICKHOUSE_PASSWORD: clickhouse
+    volumes:
+      - ./observability/clickhouse/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+      - clickhouse-data:/var/lib/clickhouse
+    ports:
+      - "8123:8123" # HTTP interface, used by both Vector and Grafana's plugin
+    ulimits:
+      nofile:
+        soft: 262144
+        hard: 262144
+
+  # Tails `app`'s Docker logs (see observability/vector/vector.yaml for why
+  # it's scoped by compose-project + service label rather than an
+  # unfiltered docker_logs source -- this daemon is a shared Avito devenv
+  # host running many unrelated containers) and ships parsed JSON log
+  # lines into ClickHouse.
+  vector:
+    image: timberio/vector:0.41.1-alpine
+    volumes:
+      - ./observability/vector/vector.yaml:/etc/vector/vector.yaml:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    depends_on:
+      - clickhouse
+      - app
+
+  # Self-hosted S3-compatible object storage for service photos and master
+  # avatars -- replaces external image CDNs (picsum.photos/i.pravatar.cc),
+  # which are unreliable from this network (picsum geo-blocked burst
+  # traffic outright during testing) and from a defense-day browser on an
+  # unknown network. Bucket is named "media" specifically so the URL path
+  # `/media/...` maps 1:1 onto the S3 object key -- see the gateway's
+  # `location /media/` below, a plain proxy_pass with no rewrite needed.
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    volumes:
+      - minio-data:/data
+    ports:
+      - "9000:9000"   # S3 API
+      - "9001:9001"   # web console
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # One-shot: creates the "media" bucket, makes it anonymously readable
+  # (product photos are public by nature -- no auth needed to view a
+  # catalog image) and uploads the seed image set. Re-running is safe:
+  # `mc cp` just overwrites the same keys.
+  minio-init:
+    image: minio/mc:latest
+    depends_on:
+      minio:
+        condition: service_healthy
+    volumes:
+      - ./frontend/public/images:/images:ro
+    entrypoint: >
+      /bin/sh -c "
+      mc alias set local http://minio:9000 minioadmin minioadmin &&
+      mc mb -p local/media &&
+      mc anonymous set download local/media &&
+      mc cp -r /images/services local/media/ &&
+      mc cp -r /images/masters local/media/ &&
+      mc cp -r /images/hero local/media/
+      "
+    restart: "no"
 
 volumes:
   db-data:
+  clickhouse-data:
   uploads:
   prometheus-data:
   grafana-data:
+  minio-data:

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"strconv"
 
 	"github.com/go-chi/chi/v5"
 
@@ -83,6 +84,32 @@ func (h *Handler) listProfiles(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	httpx.WriteJSON(w, http.StatusOK, result)
+}
+
+// ListPublicProfiles backs the public master directory (GET /api/masters) --
+// same underlying query as the admin listing (already sorted by rating
+// desc), just reachable without a SUPER_ADMIN token. Wired directly on the
+// root router in server/router.go, same reasoning as ListMasterReviews.
+func (h *Handler) ListPublicProfiles(w http.ResponseWriter, r *http.Request) {
+	h.listProfiles(w, r)
+}
+
+// GetPublicProfile backs the public master profile page (GET
+// /api/masters/{id}). Wired directly on the root router, same reasoning as
+// ListMasterReviews: the {id} path segment can't be listed in JWTAuth's
+// exact-match publicPaths.
+func (h *Handler) GetPublicProfile(w http.ResponseWriter, r *http.Request) {
+	id, err := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
+	if err != nil {
+		httpx.WriteProblem(w, http.StatusBadRequest, "Bad request", "Invalid master id")
+		return
+	}
+	dto, err := h.service.GetProfile(r.Context(), id)
+	if err != nil {
+		h.writeError(w, err)
+		return
+	}
+	httpx.WriteJSON(w, http.StatusOK, dto)
 }
 
 func (h *Handler) writeError(w http.ResponseWriter, err error) {

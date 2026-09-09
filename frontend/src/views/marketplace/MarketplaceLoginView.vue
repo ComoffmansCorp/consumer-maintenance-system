@@ -19,7 +19,16 @@ async function submit() {
   error.value = ''
   try {
     await auth.login({ username: username.value, password: password.value })
-    const redirect = (route.query.redirect as string) || '/my-requests'
+    // /my-requests is CLIENT-only -- without a role-aware fallback here,
+    // a MASTER/SUPER_ADMIN logging in with no `redirect` query param got
+    // bounced straight back to the public landing page by the router
+    // guard's role check, landing them nowhere useful post-login.
+    const roleHome: Record<string, string> = {
+      CLIENT: '/my-requests',
+      MASTER: '/profile',
+      SUPER_ADMIN: '/admin/categories',
+    }
+    const redirect = (route.query.redirect as string) || roleHome[auth.role ?? ''] || '/'
     router.push(redirect)
   } catch (e) {
     error.value = extractErrorMessage(e)

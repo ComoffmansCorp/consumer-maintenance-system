@@ -9,6 +9,28 @@ import (
 	"context"
 )
 
+const countUnreadRequestIDs = `-- name: CountUnreadRequestIDs :one
+SELECT COUNT(DISTINCT request_id)::bigint AS count
+FROM messages
+WHERE request_id = ANY($1::bigint[]) AND sender_id != $2 AND read_at IS NULL
+`
+
+type CountUnreadRequestIDsParams struct {
+	RequestIds []int64 `json:"request_ids"`
+	ReaderID   int64   `json:"reader_id"`
+}
+
+// Conversation-level count (how many threads have at least one unread
+// message), not a raw message count -- that's what a header badge should
+// show ("3 заявки с новыми сообщениями"), not "17 unread messages" which
+// reads oddly when most of that is one long back-and-forth.
+func (q *Queries) CountUnreadRequestIDs(ctx context.Context, arg CountUnreadRequestIDsParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countUnreadRequestIDs, arg.RequestIds, arg.ReaderID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const createMessage = `-- name: CreateMessage :one
 INSERT INTO messages (request_id, sender_id, text)
 VALUES ($1, $2, $3)
@@ -75,4 +97,23 @@ func (q *Queries) ListMessagesByRequestSince(ctx context.Context, arg ListMessag
 		return nil, err
 	}
 	return items, nil
+}
+
+const markMessagesRead = `-- name: MarkMessagesRead :exec
+UPDATE messages
+SET read_at = NOW()
+WHERE request_id = $1 AND sender_id != $2 AND read_at IS NULL
+`
+
+type MarkMessagesReadParams struct {
+	RequestID int64 `json:"request_id"`
+	ReaderID  int64 `json:"reader_id"`
+}
+
+// Marks every message the caller didn't send in this thread as read --
+// only the other participant's messages count as "unread" for the caller,
+// never their own.
+func (q *Queries) MarkMessagesRead(ctx context.Context, arg MarkMessagesReadParams) error {
+	_, err := q.db.Exec(ctx, markMessagesRead, arg.RequestID, arg.ReaderID)
+	return err
 }

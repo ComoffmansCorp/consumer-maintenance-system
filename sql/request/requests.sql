@@ -11,6 +11,15 @@ FROM service_requests
 WHERE id = @id
 LIMIT 1;
 
+-- name: ListParticipantRequestIDs :many
+-- Every request a user is party to, as either client or assigned master --
+-- backs the chat domain's unread-message count, which needs "which of my
+-- requests might have new messages" without duplicating request ownership
+-- data into the chat domain itself.
+SELECT id
+FROM service_requests
+WHERE client_id = @user_id OR master_id = @user_id;
+
 -- name: ListRequestsByClient :many
 SELECT id, client_id, service_id, description, address_text, latitude, longitude, status, master_id,
     agreed_price, cancel_reason, created_at, updated_at

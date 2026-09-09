@@ -1,15 +1,29 @@
 import http from 'k6/http';
 import { check } from 'k6';
 
-// Short burst, not a soak test: ~15s ramp-up -> ~45s at target rate ->
-// ~10s ramp-down, ~70s total. Targets the gateway (nginx on :8000), not
+// Staircase: warm-up, then seven distinct RPM plateaus from 100k up to
+// 400k, each held long enough (30s, several Prometheus scrape intervals)
+// to show as a flat step on the Grafana "Request rate" graph rather than
+// blending into a smooth ramp. Targets the gateway (nginx on :8000), not
 // the app directly, so numbers reflect the whole system (gateway
 // rate-limit + Redis cache-aside), not a bare Go handler.
 //
-// 100 000 RPM == 1666.7 RPS -- rounded to 1700 for a clean target with a
-// small safety margin.
+// RPM -> RPS (rounded): 100k/150k/200k/250k/300k/350k/400k RPM ==
+// 1667/2500/3334/4167/5000/5834/6667 RPS.
 const BASE_URL = __ENV.BASE_URL || 'http://localhost:8000';
-const TARGET_RPS = 1700;
+const WARMUP_RPS = 300; // ~18k RPM -- just enough to fill Redis/DB caches and connection pools, not a load test in itself
+const STEPS_RPS = [1667, 2500, 3334, 4167, 5000, 5834, 6667]; // 100k..400k RPM
+const RAMP = '8s'; // between-step ramp, short relative to the 30s hold so each plateau still reads as flat
+const HOLD = '30s';
+
+function stepStages() {
+  const stages = [];
+  for (const rps of STEPS_RPS) {
+    stages.push({ target: rps, duration: RAMP });
+    stages.push({ target: rps, duration: HOLD });
+  }
+  return stages;
+}
 
 export const options = {
   scenarios: {
@@ -17,11 +31,12 @@ export const options = {
       executor: 'ramping-arrival-rate',
       startRate: 0,
       timeUnit: '1s',
-      preAllocatedVUs: 300,
-      maxVUs: 800,
+      preAllocatedVUs: 1000,
+      maxVUs: 3000,
       stages: [
-        { target: TARGET_RPS, duration: '15s' },
-        { target: TARGET_RPS, duration: '45s' },
+        { target: WARMUP_RPS, duration: '5s' }, // ramp into warm-up
+        { target: WARMUP_RPS, duration: '15s' }, // 20s total warm-up: fills catalog cache, primes DB/Redis connection pools
+        ...stepStages(),
         { target: 0, duration: '10s' },
       ],
     },

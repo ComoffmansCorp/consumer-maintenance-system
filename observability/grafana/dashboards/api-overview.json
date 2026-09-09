@@ -9,19 +9,47 @@
   "refresh": "10s",
   "panels": [
     {
-      "id": 1,
-      "type": "timeseries",
-      "title": "Request rate (req/s by route)",
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "id": 8,
+      "type": "stat",
+      "title": "Total request rate (req/min)",
+      "description": "Exact aggregate RPM across all routes -- read this for the load-test plateau value, use the per-route panel below to see the mix.",
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 0 },
       "datasource": { "type": "prometheus", "uid": "prometheus" },
       "fieldConfig": {
-        "defaults": { "unit": "reqps", "custom": { "drawStyle": "line", "fillOpacity": 10 } },
+        "defaults": { "unit": "short", "decimals": 0 },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "orientation": "auto",
+        "textMode": "value",
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "sum(rate(http_requests_total[30s])) * 60",
+          "legendFormat": "req/min",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 1,
+      "type": "timeseries",
+      "title": "Request rate (req/min by route)",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": { "unit": "short", "custom": { "drawStyle": "line", "fillOpacity": 10 } },
         "overrides": []
       },
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "sum(rate(http_requests_total[1m])) by (method, path)",
+          "expr": "sum(rate(http_requests_total[30s])) by (method, path) * 60",
           "legendFormat": "{{method}} {{path}}",
           "refId": "A"
         }
@@ -30,8 +58,8 @@
     {
       "id": 2,
       "type": "timeseries",
-      "title": "Error rate (5xx / total)",
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "title": "Error rate by route (5xx / total)",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
       "datasource": { "type": "prometheus", "uid": "prometheus" },
       "fieldConfig": {
         "defaults": { "unit": "percentunit", "custom": { "drawStyle": "line", "fillOpacity": 10 } },
@@ -40,8 +68,8 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "sum(rate(http_requests_total{status=~\"5..\"}[5m])) / clamp_min(sum(rate(http_requests_total[5m])), 1e-9)",
-          "legendFormat": "5xx ratio",
+          "expr": "sum(rate(http_requests_total{status=~\"5..\"}[5m])) by (path) / clamp_min(sum(rate(http_requests_total[5m])) by (path), 1e-9)",
+          "legendFormat": "{{path}}",
           "refId": "A"
         }
       ]
@@ -49,8 +77,71 @@
     {
       "id": 3,
       "type": "timeseries",
-      "title": "Request latency (p50 / p95 / p99)",
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "title": "Request latency p95 by route",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 16 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": { "unit": "s", "custom": { "drawStyle": "line", "fillOpacity": 10 } },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket[5m])) by (le, path))",
+          "legendFormat": "{{path}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "type": "timeseries",
+      "title": "Goroutines",
+      "gridPos": { "h": 8, "w": 6, "x": 12, "y": 16 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": { "unit": "short", "custom": { "drawStyle": "line", "fillOpacity": 10 } },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "go_goroutines{job=\"app\"}",
+          "legendFormat": "goroutines",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "type": "timeseries",
+      "title": "GC (runs/s and pause time)",
+      "gridPos": { "h": 8, "w": 6, "x": 18, "y": 16 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": { "custom": { "drawStyle": "line", "fillOpacity": 10 } },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "rate(go_gc_duration_seconds_count{job=\"app\"}[5m])",
+          "legendFormat": "GC runs/s",
+          "refId": "A"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "rate(go_gc_duration_seconds_sum{job=\"app\"}[5m])",
+          "legendFormat": "GC pause time/s",
+          "refId": "B"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "type": "timeseries",
+      "title": "Request latency, aggregate (p50 / p95 / p99)",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 24 },
       "datasource": { "type": "prometheus", "uid": "prometheus" },
       "fieldConfig": {
         "defaults": { "unit": "s", "custom": { "drawStyle": "line", "fillOpacity": 10 } },
@@ -78,46 +169,32 @@
       ]
     },
     {
-      "id": 4,
-      "type": "timeseries",
-      "title": "Goroutines",
-      "gridPos": { "h": 8, "w": 6, "x": 12, "y": 8 },
-      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "id": 7,
+      "type": "table",
+      "title": "Recent logs (ClickHouse, via Vector)",
+      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 32 },
+      "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse" },
       "fieldConfig": {
-        "defaults": { "unit": "short", "custom": { "drawStyle": "line", "fillOpacity": 10 } },
-        "overrides": []
+        "defaults": {},
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "ts" },
+            "properties": [{ "id": "custom.width", "value": 200 }]
+          },
+          {
+            "matcher": { "id": "byName", "options": "msg" },
+            "properties": [{ "id": "custom.width", "value": 260 }]
+          }
+        ]
       },
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "go_goroutines{job=\"app\"}",
-          "legendFormat": "goroutines",
-          "refId": "A"
-        }
-      ]
-    },
-    {
-      "id": 5,
-      "type": "timeseries",
-      "title": "GC (runs/s and pause time)",
-      "gridPos": { "h": 8, "w": 6, "x": 18, "y": 8 },
-      "datasource": { "type": "prometheus", "uid": "prometheus" },
-      "fieldConfig": {
-        "defaults": { "custom": { "drawStyle": "line", "fillOpacity": 10 } },
-        "overrides": []
-      },
-      "targets": [
-        {
-          "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "rate(go_gc_duration_seconds_count{job=\"app\"}[5m])",
-          "legendFormat": "GC runs/s",
-          "refId": "A"
-        },
-        {
-          "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "rate(go_gc_duration_seconds_sum{job=\"app\"}[5m])",
-          "legendFormat": "GC pause time/s",
-          "refId": "B"
+          "refId": "A",
+          "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse" },
+          "editorType": "sql",
+          "queryType": "table",
+          "format": 1,
+          "rawSql": "SELECT ts, level, method, path, status, duration_ms, msg FROM logs.app_logs ORDER BY ts DESC LIMIT 200"
         }
       ]
     }

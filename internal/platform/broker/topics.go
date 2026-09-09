@@ -10,4 +10,9 @@ const (
 	EventRequestCompleted = "request.completed"
 	// Payload: request_id.
 	EventRequestCanceled = "request.canceled"
+	// Payload: request_id (int64), message (chat.MessageDTO) -- powers the
+	// chat WebSocket hub's fan-out (internal/chat/hub.go), so a client
+	// connected to a thread gets a push the instant SendMessage commits,
+	// instead of waiting out the old 5s poll interval.
+	EventChatMessageCreated = "chat.message.created"
 )

@@ -43,7 +43,7 @@ func (r *Repository) GetProfile(ctx context.Context, userID int64) (Profile, err
 	if err != nil {
 		return Profile{}, fmt.Errorf("get master profile: %w", err)
 	}
-	return toProfile(row), nil
+	return toProfileWithName(row.UserID, row.City, row.Bio, row.FullName, row.AvatarUrl, row.RatingAvg, row.RatingCount, row.CreatedAt, row.UpdatedAt), nil
 }
 
 func (r *Repository) ListProfiles(ctx context.Context, limit, offset int32) ([]Profile, error) {
@@ -53,7 +53,7 @@ func (r *Repository) ListProfiles(ctx context.Context, limit, offset int32) ([]P
 	}
 	out := make([]Profile, 0, len(rows))
 	for _, row := range rows {
-		out = append(out, toProfile(row))
+		out = append(out, toProfileWithName(row.UserID, row.City, row.Bio, row.FullName, row.AvatarUrl, row.RatingAvg, row.RatingCount, row.CreatedAt, row.UpdatedAt))
 	}
 	return out, nil
 }
@@ -130,6 +130,36 @@ func toProfile(row db.MasterProfile) Profile {
 		RatingCount: row.RatingCount,
 		CreatedAt:   row.CreatedAt.Time,
 		UpdatedAt:   row.UpdatedAt.Time,
+	}
+}
+
+// GetMasterProfile/ListMasterProfiles each join `users` for full_name
+// (needed by the public master directory/profile pages), which gives sqlc a
+// distinct generated row type per query even though the columns are
+// otherwise identical to master_profiles -- hence two near-identical
+// mappers rather than reusing toProfile (plain structs, no shared
+// interface sqlc could implement for a single generic mapper).
+func toProfileWithName(userID int64, city, bio, fullName pgtype.Text, avatarURL pgtype.Text, ratingAvg float64, ratingCount int32, createdAt, updatedAt pgtype.Timestamptz) Profile {
+	c, b, n := "", "", ""
+	if city.Valid {
+		c = city.String
+	}
+	if bio.Valid {
+		b = bio.String
+	}
+	if fullName.Valid {
+		n = fullName.String
+	}
+	return Profile{
+		UserID:      userID,
+		FullName:    n,
+		City:        c,
+		Bio:         b,
+		AvatarURL:   nilIfEmptyText(avatarURL),
+		RatingAvg:   ratingAvg,
+		RatingCount: ratingCount,
+		CreatedAt:   createdAt.Time,
+		UpdatedAt:   updatedAt.Time,
 	}
 }
 

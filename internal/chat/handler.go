@@ -74,6 +74,38 @@ func (h *Handler) SendMessage(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, http.StatusCreated, dto)
 }
 
+func (h *Handler) MarkRead(w http.ResponseWriter, r *http.Request) {
+	auth, ok := middleware.AuthFromContext(r.Context())
+	if !ok {
+		httpx.WriteProblem(w, http.StatusUnauthorized, "Unauthorized", "Authentication required")
+		return
+	}
+	requestID, err := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
+	if err != nil {
+		httpx.WriteProblem(w, http.StatusBadRequest, "Bad request", "Invalid request id")
+		return
+	}
+	if err := h.service.MarkRead(r.Context(), requestID, auth.UserID); err != nil {
+		h.writeError(w, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (h *Handler) UnreadCount(w http.ResponseWriter, r *http.Request) {
+	auth, ok := middleware.AuthFromContext(r.Context())
+	if !ok {
+		httpx.WriteProblem(w, http.StatusUnauthorized, "Unauthorized", "Authentication required")
+		return
+	}
+	count, err := h.service.CountUnreadConversations(r.Context(), auth.UserID)
+	if err != nil {
+		h.writeError(w, err)
+		return
+	}
+	httpx.WriteJSON(w, http.StatusOK, map[string]int64{"count": count})
+}
+
 func (h *Handler) writeError(w http.ResponseWriter, err error) {
 	switch {
 	case errors.Is(err, ErrRequestNotFound):

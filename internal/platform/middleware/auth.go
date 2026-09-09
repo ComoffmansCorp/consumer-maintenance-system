@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"strings"
 
@@ -9,6 +10,8 @@ import (
 	platformcache "github.com/myurbondarchuk/consumer-maintenance-system/internal/platform/cache"
 	"github.com/myurbondarchuk/consumer-maintenance-system/internal/platform/httpx"
 )
+
+var ErrTokenRevoked = errors.New("token has been revoked")
 
 type AuthContext struct {
 	UserID int64
@@ -24,6 +27,24 @@ func WithAuth(ctx context.Context, auth AuthContext) context.Context {
 func AuthFromContext(ctx context.Context) (AuthContext, bool) {
 	auth, ok := ctx.Value(authContextKey{}).(AuthContext)
 	return auth, ok
+}
+
+// AuthenticateToken validates a bearer token string and applies the same
+// revocation check JWTAuth does, factored out so a non-HTTP-header caller
+// (the chat WebSocket handshake, which authenticates via a query param
+// instead -- browsers can't set a custom Authorization header on a
+// WebSocket upgrade request) doesn't have to duplicate this logic.
+func AuthenticateToken(ctx context.Context, tokens *platformauth.Service, cacheClient *platformcache.Client, token string) (AuthContext, error) {
+	claims, err := tokens.ParseAccessToken(token)
+	if err != nil {
+		return AuthContext{}, err
+	}
+	if cacheClient != nil && claims.ID != "" {
+		if revoked, err := cacheClient.Exists(ctx, "revoked:"+claims.ID); err == nil && revoked {
+			return AuthContext{}, ErrTokenRevoked
+		}
+	}
+	return AuthContext{UserID: claims.UserID, Role: claims.Role}, nil
 }
 
 // JWTAuth validates the bearer access token and, if cacheClient is non-nil,
@@ -49,24 +70,17 @@ func JWTAuth(tokens *platformauth.Service, cacheClient *platformcache.Client, pu
 			}
 
 			token := strings.TrimSpace(strings.TrimPrefix(header, "Bearer "))
-			claims, err := tokens.ParseAccessToken(token)
+			auth, err := AuthenticateToken(r.Context(), tokens, cacheClient, token)
 			if err != nil {
-				httpx.WriteProblem(w, http.StatusUnauthorized, "Unauthorized", "Invalid or expired token")
+				status, detail := http.StatusUnauthorized, "Invalid or expired token"
+				if errors.Is(err, ErrTokenRevoked) {
+					detail = "Token has been revoked"
+				}
+				httpx.WriteProblem(w, status, "Unauthorized", detail)
 				return
 			}
 
-			if cacheClient != nil && claims.ID != "" {
-				if revoked, err := cacheClient.Exists(r.Context(), "revoked:"+claims.ID); err == nil && revoked {
-					httpx.WriteProblem(w, http.StatusUnauthorized, "Unauthorized", "Token has been revoked")
-					return
-				}
-			}
-
-			ctx := WithAuth(r.Context(), AuthContext{
-				UserID: claims.UserID,
-				Role:   claims.Role,
-			})
-			next.ServeHTTP(w, r.WithContext(ctx))
+			next.ServeHTTP(w, r.WithContext(WithAuth(r.Context(), auth)))
 		})
 	}
 }

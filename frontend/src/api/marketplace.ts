@@ -51,6 +51,10 @@ export const masterApi = {
     api
       .get<Page<ReviewDTO>>(`/masters/${masterId}/reviews`, { params: { page, pageSize } })
       .then((r) => r.data),
+  // Public directory/profile -- no auth required, same as catalog browsing.
+  listPublic: (page = 1, pageSize = 50) =>
+    api.get<Page<ProfileDTO>>('/masters', { params: { page, pageSize } }).then((r) => r.data),
+  getPublicProfile: (masterId: number) => api.get<ProfileDTO>(`/masters/${masterId}`).then((r) => r.data),
 }
 
 export const requestsApi = {
@@ -101,6 +105,8 @@ export const chatApi = {
       .then((r) => r.data),
   send: (requestId: number, text: string) =>
     api.post<MessageDTO>(`/requests/${requestId}/messages`, { text }).then((r) => r.data),
+  markRead: (requestId: number) => api.post(`/requests/${requestId}/messages/read`).then(() => undefined),
+  unreadCount: () => api.get<{ count: number }>('/requests/unread-count').then((r) => r.data.count),
 }
 
 export const adminApi = {

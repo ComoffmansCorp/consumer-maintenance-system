@@ -1,0 +1,20 @@
+# Provisions the ClickHouse datasource (grafana-clickhouse-datasource
+# plugin, installed via GF_INSTALL_PLUGINS in docker-compose.yml) so
+# logs.app_logs (shipped by Vector, see observability/vector/vector.yaml)
+# is queryable from Grafana without any manual "Add data source" click.
+apiVersion: 1
+
+datasources:
+  - name: ClickHouse
+    uid: clickhouse
+    type: grafana-clickhouse-datasource
+    access: proxy
+    jsonData:
+      host: clickhouse
+      port: 8123
+      protocol: http
+      defaultDatabase: logs
+      username: default
+    secureJsonData:
+      password: clickhouse
+    editable: true

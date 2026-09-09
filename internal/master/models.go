@@ -4,6 +4,7 @@ import "time"
 
 type Profile struct {
 	UserID      int64
+	FullName    string
 	City        string
 	Bio         string
 	AvatarURL   *string

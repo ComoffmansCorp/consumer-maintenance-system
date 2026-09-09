@@ -44,6 +44,11 @@ func (a *RequestAdapter) GetParticipants(ctx context.Context, requestID int64) (
 	return clientID, masterID, true, nil
 }
 
+// ListParticipantRequestIDs satisfies chat.RequestPort.
+func (a *RequestAdapter) ListParticipantRequestIDs(ctx context.Context, userID int64) ([]int64, error) {
+	return a.requests.ListParticipantRequestIDs(ctx, userID)
+}
+
 func isRequestIneligible(err error) bool {
 	return errors.Is(err, request.ErrRequestNotFound) ||
 		errors.Is(err, request.ErrNotOwner) ||

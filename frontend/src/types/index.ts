@@ -58,6 +58,7 @@ export interface ServiceDTO {
 
 export interface ProfileDTO {
   userId: number
+  fullName?: string
   city?: string
   bio?: string
   avatarUrl?: string
